@@ -14,6 +14,41 @@ const loadVoiceSettings = () => {
   try { return JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch { return {}; }
 };
 
+/* Web Speech API voices load ASYNCHRONOUSLY. The very first
+   speechSynthesis.getVoices() call almost always returns [] — the list only
+   populates a moment later and fires `onvoiceschanged`. If we speak before
+   that, no language voice can be selected and the browser falls back to its
+   default (English) voice — which is exactly why a Hindi/Tamil interview
+   "sounds English". This resolves once the voice list is actually available
+   (or after a short timeout, so we never hang). */
+let _voicesReady = null;
+const ensureVoicesLoaded = () => {
+  if (_voicesReady) return _voicesReady;
+  _voicesReady = new Promise((resolve) => {
+    const synth = window.speechSynthesis;
+    if (!synth) { resolve([]); return; }
+    const have = synth.getVoices();
+    if (have && have.length) { resolve(have); return; }
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      resolve(synth.getVoices() || []);
+    };
+    synth.onvoiceschanged = finish;
+    // Poll as a fallback — some browsers never fire onvoiceschanged.
+    let tries = 0;
+    const poll = setInterval(() => {
+      tries += 1;
+      if ((synth.getVoices() || []).length || tries > 40) {  // ~4s max
+        clearInterval(poll);
+        finish();
+      }
+    }, 100);
+  });
+  return _voicesReady;
+};
+
 /* =========================================================================
    Step 1 — Phone confirmation modal
    ========================================================================= */
@@ -270,8 +305,12 @@ export const InterviewRoom = ({ candidate, phone, language = 'en-IN', onClose, o
   /* Speak naturally: slow rate, longer breathing pauses between sentences,
      one chunk at a time so the browser's queue doesn't truncate long text.
      Respects both the local mute button AND the global Settings toggle. */
-  const speak = useCallback((text) => new Promise((resolve) => {
+  const speak = useCallback((text) => new Promise(async (resolve) => {
     if (!text || !window.speechSynthesis) { resolve(); return; }
+    // CRITICAL: wait until the browser's voice list is populated before we
+    // pick a voice — otherwise the first utterance (the intro) speaks with
+    // the default English voice no matter what language was chosen.
+    await ensureVoicesLoaded();
     try { window.speechSynthesis.cancel(); } catch {}
     if (isMuted) { resolve(); return; }
     // Re-read settings on every call so the master mute toggled on the
