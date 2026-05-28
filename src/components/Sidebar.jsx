@@ -62,6 +62,9 @@ const Sidebar = () => {
       {isAdmin && (
         <div className="nav-section">
           <div className="nav-label">System</div>
+          <NavLink to="/employees" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
+            <FiUsers /> Employees
+          </NavLink>
           <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
             <FiSettings /> Settings
           </NavLink>

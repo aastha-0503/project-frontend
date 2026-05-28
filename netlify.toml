@@ -1,0 +1,50 @@
+# Netlify build config for the Geeky AI frontend.
+#
+# Deploy options:
+#   A) Frontend-only repo (you pushed just the `frontend/` contents) →
+#      leave the "Base directory" field BLANK in Netlify.  The settings
+#      below assume the repo root IS the Vite app.
+#
+#   B) Monorepo with frontend/ + backend/ sub-folders →
+#      set Netlify "Base directory" to `frontend`.  Netlify cd's there
+#      before reading this file.
+#
+# Required Environment Variable in Netlify Site settings:
+#   VITE_API_BASE = https://<your-render-service>.onrender.com
+# Without it, the built bundle calls http://127.0.0.1:8000 — which works
+# locally but NOT for visitors of the deployed site.
+
+[build]
+  command  = "npm install && npm run build"
+  publish  = "dist"
+
+[build.environment]
+  # Pin Node to a known-good Vite-compatible version.  Bump as you upgrade.
+  NODE_VERSION = "20"
+  # CI=true makes some linters/builders strict.  Vite tolerates it.
+  CI = "true"
+
+# ── Single-page app fallback ────────────────────────────────────────
+# React Router uses HTML5 history mode — direct hits to /candidates,
+# /settings, /login etc. must be served the same index.html so React
+# can route client-side.  Without this rule Netlify returns 404 for any
+# URL beyond `/`.
+[[redirects]]
+  from = "/*"
+  to   = "/index.html"
+  status = 200
+
+# ── Cache + security headers ────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options        = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy        = "strict-origin-when-cross-origin"
+    # Long-cache for fingerprinted assets in /assets (Vite hashes filenames).
+    # The HTML itself uses Netlify's default short-cache so updates roll out.
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

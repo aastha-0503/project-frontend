@@ -1542,8 +1542,8 @@ const Candidates = () => {
       <PhoneConfirmModal
         candidate={phoneConfirmFor}
         onClose={() => setPhoneConfirmFor(null)}
-        onConfirm={(phone, mode) => {
-          setInterviewSession({ candidate: phoneConfirmFor, phone, mode: mode || 'browser' });
+        onConfirm={(phone, mode, language) => {
+          setInterviewSession({ candidate: phoneConfirmFor, phone, mode: mode || 'browser', language: language || 'en-IN' });
           setPhoneConfirmFor(null);
         }}
       />
@@ -1560,6 +1560,7 @@ const Candidates = () => {
         <InterviewRoom
           candidate={interviewSession.candidate}
           phone={interviewSession.phone}
+          language={interviewSession.language}
           onClose={() => setInterviewSession(null)}
           onSaved={() => { fetchInterviews(); }}
         />

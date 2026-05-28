@@ -1,6 +1,27 @@
 // Enterprise feature utilities — theme, pipeline stages, notes, helpers.
 
-export const API_BASE = 'http://127.0.0.1:8000';
+// API base — driven by VITE_API_BASE at build time so the same bundle can
+// point at localhost (dev), a Render deployment, ngrok, etc.  Falls back to
+// localhost so `npm run dev` works with no env var.
+//
+// On Netlify: Site settings → Environment variables → add
+//   VITE_API_BASE = https://your-render-backend.onrender.com
+// Then redeploy — Vite inlines the value into the JS bundle at build time.
+// When no VITE_API_BASE is set, point the API at whatever host is serving
+// the frontend, on port 8000.  This lets the same dev build work from
+// localhost AND from other devices on the LAN (e.g. http://10.5.49.100:5173
+// → http://10.5.49.100:8000).  Hard-coding 0.0.0.0 only worked on the host
+// machine — remote browsers would try to reach their own 0.0.0.0.
+function defaultApiBase() {
+  if (typeof window === 'undefined') return 'http://localhost:8000';
+  const host = window.location.hostname || 'localhost';
+  return `${window.location.protocol}//${host}:8000`;
+}
+
+export const API_BASE = (
+  import.meta.env.VITE_API_BASE ||
+  defaultApiBase()
+).replace(/\/+$/, '');
 
 // Legacy default — only used for pages opened with no active job selected.
 // Per-JD job ids are minted by the backend and stored on each chat record.
@@ -29,6 +50,34 @@ export const SESSION_ID = LEGACY_SESSION_ID;
 
 export const INTERVIEW_THRESHOLD = 50;
 export const ASSESSMENT_PASS_PERCENT = 50;
+
+/* =========================================================================
+   Interview languages (Web Speech API uses BCP-47 codes). `native` is shown
+   in the picker so a recruiter sees the script; `name` is the English label.
+   ========================================================================= */
+export const INTERVIEW_LANGUAGES = [
+  { code: 'en-IN', name: 'English (India)', native: 'English' },
+  { code: 'hi-IN', name: 'Hindi',     native: 'हिन्दी' },
+  { code: 'ta-IN', name: 'Tamil',     native: 'தமிழ்' },
+  { code: 'te-IN', name: 'Telugu',    native: 'తెలుగు' },
+  { code: 'kn-IN', name: 'Kannada',   native: 'ಕನ್ನಡ' },
+  { code: 'ml-IN', name: 'Malayalam', native: 'മലയാളം' },
+  { code: 'mr-IN', name: 'Marathi',   native: 'मराठी' },
+  { code: 'bn-IN', name: 'Bengali',   native: 'বাংলা' },
+  { code: 'gu-IN', name: 'Gujarati',  native: 'ગુજરાતી' },
+  { code: 'pa-IN', name: 'Punjabi',   native: 'ਪੰਜਾਬੀ' },
+];
+
+export const INTERVIEW_LANG_KEY = 'geeky_ai_interview_lang';
+
+export function loadInterviewLang() {
+  try { return localStorage.getItem(INTERVIEW_LANG_KEY) || 'en-IN'; }
+  catch { return 'en-IN'; }
+}
+
+export function saveInterviewLang(code) {
+  try { localStorage.setItem(INTERVIEW_LANG_KEY, code); } catch {}
+}
 
 /* =========================================================================
    Theme (light / dark / system)

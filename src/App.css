@@ -160,6 +160,25 @@ body {
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.04);
+
+  /* Scroll the sidebar internally when its content is taller than the
+     viewport (added nav items for admins push it past 100vh on some screens).
+     Without this, the brand header at the top and the user-chip / status
+     line at the bottom both get clipped because .app-shell sets
+     overflow: hidden on the outer scroll container. */
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+
+.sidebar::-webkit-scrollbar { width: 6px; }
+.sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .brand-header {

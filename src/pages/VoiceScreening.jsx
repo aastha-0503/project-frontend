@@ -7,9 +7,10 @@ import {
   FiUpload, FiDatabase, FiPlayCircle, FiArrowRight,
 } from 'react-icons/fi';
 
-import { setActiveJobId } from '../lib/enterprise.js';
+// Import API_BASE from the shared lib so this file picks up VITE_API_BASE
+// at build time too — no separate env-var wiring needed here.
+import { setActiveJobId, API_BASE } from '../lib/enterprise.js';
 
-const API_BASE = 'http://127.0.0.1:8000';
 const SETTINGS_KEY = 'geeky_ai_settings';
 
 const loadSettings = () => {

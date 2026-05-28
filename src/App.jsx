@@ -7,6 +7,7 @@ import Candidates from './pages/Candidates';
 import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
 import Jobs from './pages/Jobs';
+import Employees from './pages/Employees';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
 import './App.css';
@@ -74,6 +75,9 @@ const AppShell = () => (
         <Route path="/jobs" element={<Jobs />} />
         <Route path="/candidates" element={<Candidates />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/employees" element={
+          <ProtectedRoute requireAdmin><Employees /></ProtectedRoute>
+        } />
         <Route path="/settings" element={
           <ProtectedRoute requireAdmin><Settings /></ProtectedRoute>
         } />

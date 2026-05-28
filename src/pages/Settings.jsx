@@ -402,7 +402,7 @@ const Settings = () => {
   const clearLocalData = async () => {
     if (!confirm("This clears all local chat history and resets the backend session. Continue?")) return;
     localStorage.removeItem('geeky_ai_chats');
-    try { await axios.post('http://127.0.0.1:8000/api/reset'); } catch {}
+    try { await axios.post(`${API_BASE}/api/reset`); } catch {}
     alert("Local data cleared. Refresh to start fresh.");
   };
 
@@ -561,7 +561,7 @@ const Settings = () => {
         </h3>
         <p className="subtitle" style={{ marginBottom: 18 }}>
           The address candidates use to open their assessment link. <strong>Localhost
-          URLs (127.0.0.1) only work on your own machine</strong> — to send links over
+          URLs (0.0.0.0) only work on your own machine</strong> — to send links over
           email you need a tunnel or a real public host.
         </p>
 
@@ -1243,7 +1243,7 @@ ngrok http 8000`}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <a
-              href="http://127.0.0.1:8000/api/download_report"
+              href={`${API_BASE}/api/download_report`}
               target="_blank"
               rel="noreferrer"
               className="action-btn"

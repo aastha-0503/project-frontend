@@ -4,7 +4,10 @@ import {
   FiPhone, FiPhoneOff, FiMic, FiMicOff, FiVolume2, FiX, FiSkipForward,
   FiRotateCw, FiSave, FiCheckCircle
 } from 'react-icons/fi';
-import { API_BASE, getActiveJobId } from '../lib/enterprise.js';
+import {
+  API_BASE, getActiveJobId,
+  INTERVIEW_LANGUAGES, loadInterviewLang, saveInterviewLang,
+} from '../lib/enterprise.js';
 
 const SETTINGS_KEY = 'geeky_ai_settings';
 const loadVoiceSettings = () => {
@@ -19,6 +22,7 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
   const [error, setError] = useState('');
   const [twilioReady, setTwilioReady] = useState(false);
   const [fromNumber, setFromNumber] = useState('');
+  const [language, setLanguage] = useState(loadInterviewLang());
 
   useEffect(() => {
     setPhone(candidate?.Phone || '');
@@ -49,7 +53,8 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
       setError('Please enter a valid phone number (10–13 digits).');
       return;
     }
-    onConfirm(phone.trim(), mode);
+    saveInterviewLang(language);
+    onConfirm(phone.trim(), mode, language);
   };
 
   return (
@@ -93,6 +98,32 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
               {error || 'Edit the number if needed. Geeky AI will use this to identify the call.'}
             </div>
           </div>
+
+          <div className="modal-field">
+            <label>Interview language</label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              style={{
+                width: '100%', padding: '11px 14px',
+                border: '1px solid var(--border-color)', borderRadius: 'var(--radius)',
+                fontSize: '1rem', fontFamily: 'inherit',
+                background: 'var(--bg-surface)', color: 'var(--text-main)', outline: 'none',
+              }}
+            >
+              {INTERVIEW_LANGUAGES.map(l => (
+                <option key={l.code} value={l.code}>
+                  {l.native} — {l.name}
+                </option>
+              ))}
+            </select>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>
+              Geeky AI will ask the questions and listen in this language. Works in browser
+              mode (Chrome/Edge). The candidate's spoken language pack must be installed on
+              this device for the most natural voice.
+            </div>
+          </div>
+
           {twilioReady ? (
             <div className="assessment-callout" style={{ marginTop: 8, background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(6,182,212,0.05))', borderColor: 'rgba(16,185,129,0.3)' }}>
               <div className="ico" style={{ background: 'var(--success)' }}><FiPhone size={14} /></div>
@@ -134,7 +165,7 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
 /* =========================================================================
    Step 2 — Interview Room (TTS + STT loop)
    ========================================================================= */
-export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
+export const InterviewRoom = ({ candidate, phone, language = 'en-IN', onClose, onSaved }) => {
   const [prep, setPrep] = useState(null);      // { interview_id, questions, intro, outro, role_title }
   const [stage, setStage] = useState('loading'); // loading | intro | asking | listening | between | done | saving
   const [qIndex, setQIndex] = useState(-1);
@@ -142,7 +173,9 @@ export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
   const [interim, setInterim] = useState('');
   const [final, setFinal] = useState('');
   const [error, setError] = useState('');
+  const [voiceWarning, setVoiceWarning] = useState('');
   const [isMuted, setIsMuted] = useState(false);
+  const langRef = useRef(language || 'en-IN');
   const startedAtRef = useRef(new Date().toISOString());
   const recognitionRef = useRef(null);
   const voiceSettings = useRef(loadVoiceSettings());
@@ -151,51 +184,64 @@ export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
 
   /* ---------- TTS ---------- */
   const pickedVoiceRef = useRef(null);
-  const pickVoice = () => {
+
+  /* Pick the most natural installed voice FOR THE SELECTED LANGUAGE. A voice
+     whose lang exactly matches (e.g. ta-IN for Tamil) is strongly preferred;
+     we fall back to the same base language (ta-*), then to any Indian voice,
+     and finally to the system default — flagging a warning if nothing in the
+     target language is installed so the recruiter knows to add the OS
+     language pack for the best result. */
+  const pickVoice = (langCode) => {
     const list = window.speechSynthesis?.getVoices?.() || [];
     if (!list.length) return null;
+
+    const target = (langCode || langRef.current || 'en-IN').toLowerCase().replace('_', '-');
+    const base   = target.split('-')[0];                 // 'ta' from 'ta-IN'
+
+    // Honor an explicit voice choice from Settings only when it matches the
+    // chosen language (otherwise we'd read Tamil text with an English voice).
     const preferred = voiceSettings.current?.voiceName;
     if (preferred) {
-      const m = list.find(v => v.name === preferred);
+      const m = list.find(v => v.name === preferred && (v.lang || '').toLowerCase().startsWith(base));
       if (m) return m;
     }
 
-    // Score each voice. Higher = more natural Indian voice.
-    // Neural / Online / Natural variants of Indian voices > generic en-IN >
-    // Indian-named voices in other langs > anything English.
     const score = (v) => {
       const n = (v.name || '').toLowerCase();
-      const l = (v.lang || '').toLowerCase();
+      const l = (v.lang || '').toLowerCase().replace('_', '-');
       let s = 0;
-      const isIndianLang = l.includes('en-in') || l.includes('en_in') || l.includes('hi-in') || l.includes('hi_in');
-      const isIndianName = /\bindia(n)?\b|heera|ravi|kalpana|prabhat|aarav|aditi|raveena|veena|chitra|hemant|prashant|priya|kabir|sneha|neerja/.test(n);
-      if (isIndianLang) s += 100;
-      if (isIndianName) s += 60;
-      // Neural / Online variants sound dramatically more human.
-      if (/\bneural\b/.test(n))    s += 40;
-      if (/\bnatural\b/.test(n))   s += 30;
-      if (/\bonline\b/.test(n))    s += 25;
-      if (/google/i.test(v.name))  s += 15;   // Google's voices are usually higher quality
-      // Female interviewer is the default persona.
-      if (/female|heera|aditi|raveena|veena|chitra|priya|kalpana|aria|jenny|samantha|zira/.test(n)) s += 5;
-      if (l.startsWith('en'))      s += 1;
+      if (l === target)            s += 300;   // exact e.g. ta-IN
+      else if (l.startsWith(base)) s += 200;   // same language, other region
+      else if (l.includes('-in') || /india/.test(n)) s += 40;  // any Indian voice as last resort
+      // Quality bumps — neural/online variants sound dramatically more human.
+      if (/\bneural\b/.test(n))  s += 40;
+      if (/\bnatural\b/.test(n)) s += 30;
+      if (/\bonline\b/.test(n))  s += 25;
+      if (/google/i.test(n))     s += 15;
+      // Prefer a warm female interviewer persona when several tie.
+      if (/female|heera|aditi|raveena|veena|chitra|priya|kalpana|swara|sapna|aria|jenny/.test(n)) s += 5;
       return s;
     };
 
     const sorted = [...list].sort((a, b) => score(b) - score(a));
     const chosen = sorted[0];
+    const matchesLang = chosen && (chosen.lang || '').toLowerCase().replace('_', '-').startsWith(base);
 
     if (chosen && pickedVoiceRef.current?.name !== chosen.name) {
-      const indianTag = /en[-_]IN|hi[-_]IN/i.test(chosen.lang) || /india(n)?|heera|ravi|aditi|raveena|veena|chitra|priya|kalpana/i.test(chosen.name);
-      console.log(
-        `[Geeky AI Interview] Voice: ${chosen.name} (${chosen.lang}) — ${indianTag ? 'Indian ✓' : 'no en-IN available'}`
-      );
-      if (!indianTag) {
-        console.log('[Geeky AI Interview] Available voices:',
-          list.map(v => `${v.name} (${v.lang})`).join(' · '));
-      }
+      console.log(`[Geeky AI Interview] lang=${target} → voice: ${chosen.name} (${chosen.lang})${matchesLang ? ' ✓' : ' (no exact match)'}`);
       pickedVoiceRef.current = chosen;
     }
+
+    if (!matchesLang && base !== 'en') {
+      setVoiceWarning(
+        `No ${target} voice is installed on this device, so the questions may be read with a non-native ` +
+        `voice. For natural pronunciation, install the language pack (Windows: Settings → Time & Language → ` +
+        `Language → Add a language → include "Text-to-speech") and reopen the interview.`
+      );
+    } else {
+      setVoiceWarning('');
+    }
+
     return chosen;
   };
 
@@ -237,12 +283,13 @@ export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
     const chunks = splitSentences(text);
     if (chunks.length === 0) { resolve(); return; }
 
-    const voice = pickVoice();
+    const langCode = langRef.current || 'en-IN';
+    const voice = pickVoice(langCode);
     // Interview speech is intentionally slower than chat — feels thoughtful,
-    // not robotic. The Indian-voice fingerprint also benefits from a slightly
-    // lower pitch (0.97) for a warmer, more conversational tone.
-    const rate  = Number(voiceSettings.current?.rate)  || 0.82;
-    const pitch = Number(voiceSettings.current?.pitch) || 0.97;
+    // not robotic. A slightly lower pitch (0.97) gives a warmer, more
+    // conversational tone.
+    const baseRate  = Number(voiceSettings.current?.rate)  || 0.82;
+    const basePitch = Number(voiceSettings.current?.pitch) || 0.97;
     // Pause length between sentences — 280ms approximates a natural breath.
     const pauseMs = 280;
 
@@ -251,14 +298,21 @@ export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
       if (idx >= chunks.length) { resolve(); return; }
       const u = new SpeechSynthesisUtterance(chunks[idx]);
       if (voice) u.voice = voice;
-      u.rate   = rate;
-      u.pitch  = pitch;
+      // Always set the BCP-47 lang so engines without a dedicated voice still
+      // apply the correct phoneme set / accent for the chosen language.
+      u.lang = (voice && voice.lang) ? voice.lang : langCode;
+      // Tiny per-sentence jitter (±4% rate, ±2% pitch) so the cadence isn't
+      // metronomic — a subtle but effective "sounds human" cue.
+      u.rate   = +(baseRate  * (0.96 + Math.random() * 0.08)).toFixed(3);
+      u.pitch  = +(basePitch * (0.98 + Math.random() * 0.04)).toFixed(3);
       u.volume = 1.0;
       u.onend = () => {
         idx += 1;
-        // Pause a bit longer at hard punctuation (.!?) than at commas.
+        // Pause a bit longer at hard punctuation (.!?) than at commas, with a
+        // little randomness so the breaths feel natural rather than clockwork.
         const endsHard = /[.!?]\s*$/.test(chunks[idx - 1] || '');
-        setTimeout(speakNext, endsHard ? pauseMs : Math.round(pauseMs * 0.55));
+        const jitter = 0.85 + Math.random() * 0.4;
+        setTimeout(speakNext, Math.round((endsHard ? pauseMs : pauseMs * 0.55) * jitter));
       };
       u.onerror = () => {
         idx += 1;
@@ -276,7 +330,9 @@ export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
     if (!SR) return null;
     if (recognitionRef.current) return recognitionRef.current;
     const rec = new SR();
-    rec.lang = 'en-US';
+    // Recognise speech in the interview language so an answer in, say, Telugu
+    // is transcribed correctly instead of being mangled as English.
+    rec.lang = langRef.current || 'en-IN';
     rec.continuous = true;
     rec.interimResults = true;
     recognitionRef.current = rec;
@@ -339,8 +395,11 @@ export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
           candidate_name: candidate.Candidate_Name,
           phone,
           file_name: candidate.File_Name || '',
+          language: langRef.current,
         });
         if (cancelled) return;
+        // Trust the language the backend actually localised into.
+        if (res.data?.language) langRef.current = res.data.language;
         setPrep(res.data);
         // Seed transcript with empty answers.
         setTranscript(res.data.questions.map(q => ({
@@ -480,7 +539,13 @@ export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
             <div className="agent-avatar">G</div>
             <div className="interview-meta">
               <strong>{candidate.Candidate_Name}</strong>
-              <span>{phone}{prep?.role_title ? ` · ${prep.role_title}` : ''}</span>
+              <span>
+                {phone}{prep?.role_title ? ` · ${prep.role_title}` : ''}
+                {(() => {
+                  const l = INTERVIEW_LANGUAGES.find(x => x.code === (prep?.language || language));
+                  return l ? ` · ${l.native}` : '';
+                })()}
+              </span>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -549,6 +614,12 @@ export const InterviewRoom = ({ candidate, phone, onClose, onSaved }) => {
             {error && (
               <div style={{ padding: '10px 14px', background: 'var(--danger-soft)', color: '#991b1b', borderRadius: 'var(--radius)', fontSize: '0.86rem' }}>
                 {error}
+              </div>
+            )}
+
+            {voiceWarning && !error && (
+              <div style={{ padding: '10px 14px', background: 'rgba(234,179,8,0.10)', border: '1px solid rgba(234,179,8,0.35)', color: '#854d0e', borderRadius: 'var(--radius)', fontSize: '0.82rem' }}>
+                ⚠️ {voiceWarning}
               </div>
             )}
 

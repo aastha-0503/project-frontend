@@ -48,7 +48,11 @@ const Login = ({ mode = 'login' }) => {
   const location = useLocation();
   const { login, signup } = useAuth();
 
-  const [role, setRole]           = useState('admin');
+  const isSignup = mode === 'signup';
+  // Public signup is employees only — admin accounts are minted by an
+  // existing admin from the Employees page. Default the role accordingly
+  // so an employee can't accidentally land on the Admin tab.
+  const [role, setRole]           = useState(isSignup ? 'user' : 'admin');
   const [identifier, setId]       = useState('');
   const [email, setEmail]         = useState('');
   const [name, setName]           = useState('');
@@ -62,7 +66,9 @@ const Login = ({ mode = 'login' }) => {
   // ProtectedRoute set when it redirected them here.
   const redirectTo = location.state?.from || '/';
 
-  const isSignup = mode === 'signup';
+  // On signup, only the Employee role is selectable from the public UI.
+  // Login keeps both tabs — a real admin still needs the admin tab to sign in.
+  const visibleRoles = isSignup ? ROLES.filter(r => r.id === 'user') : ROLES;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -179,9 +185,11 @@ const Login = ({ mode = 'login' }) => {
 
         {/* Role picker — same in login and signup */}
         <div role="tablist" style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18,
+          display: 'grid',
+          gridTemplateColumns: visibleRoles.length > 1 ? '1fr 1fr' : '1fr',
+          gap: 10, marginBottom: 18,
         }}>
-          {ROLES.map(({ id, label, icon: Icon }) => {
+          {visibleRoles.map(({ id, label, icon: Icon }) => {
             const active = role === id;
             return (
               <button
@@ -325,7 +333,7 @@ const Login = ({ mode = 'login' }) => {
             fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55,
           }}>
             <strong style={{ color: 'var(--text-main)' }}>Demo admin:</strong>{' '}
-            <code>admin@geeky.ai</code> / <code>admin@123</code> — change in production.
+            <code>admin@geeky.ai</code> / <code>admin123</code> — change in production.
           </div>
         )}
       </div>
