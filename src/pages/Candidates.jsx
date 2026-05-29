@@ -520,7 +520,7 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
                         ? `${LEVEL_META[levelUrls[0].level].short} assessment`
                         : `${levelUrls.length} assessments will be included`}
                     </strong>
-                    {' '}— 25 MCQ + MSQ questions, 25-minute proctored window.
+                    {' '}— MCQ + MSQ + coding questions (C / C++ / Java / Python), 60-minute proctored window.
                     <div style={{
                       marginTop: 6, padding: '6px 10px',
                       background: 'rgba(245,158,11,0.08)',
