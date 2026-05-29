@@ -305,22 +305,45 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
     setGenBusy(true);
     setGenErr('');
     try {
+      // Generation runs in the background on the server now (it can take a
+      // minute+ with the coding round and LLM rate limits — longer than a
+      // tunnel will hold an HTTP request). The POST returns immediately with
+      // the deterministic URLs; we then poll until the questions are ready.
       const res = await axios.post(`${API_BASE}/api/assessment/generate`, {
         session_id: rowJobId, question_source: source,
       });
       const d = res.data || {};
-      if (d.status !== 'success') {
+      if (d.status === 'error') {
         setGenErr(d.message || 'Generation failed.');
         return;
       }
-      // Patch this row in-memory so the modal immediately renders the URLs.
-      // The parent also gets notified so the Candidates table re-renders.
+
+      // Surface the URLs right away so the recruiter can copy them.
       const patched = {
         ...row,
         Assessment_Url:  d.assessment_url || '',
         Assessment_Urls: d.assessment_urls || null,
       };
       if (typeof onRowUpdate === 'function') onRowUpdate(patched);
+
+      // Poll for completion (~3s cadence, ~5 min cap).
+      const deadline = Date.now() + 5 * 60 * 1000;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        await new Promise(r => setTimeout(r, 3000));
+        let st;
+        try {
+          st = (await axios.get(`${API_BASE}/api/assessment/status/${rowJobId}`)).data || {};
+        } catch {
+          continue; // transient — keep polling
+        }
+        if (st.error) { setGenErr(st.error); return; }
+        if (st.ready && !st.generating) break;
+        if (Date.now() > deadline) {
+          setGenErr('Generation is taking longer than expected. The links are ready to copy; the questions may still be finishing — try again in a moment.');
+          return;
+        }
+      }
     } catch (e) {
       setGenErr(e.response?.data?.message || e.message || 'Generation failed.');
     } finally {
