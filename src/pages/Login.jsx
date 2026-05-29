@@ -1,4 +1,4 @@
-// Two-panel sign-in for Geeky AI.
+// Two-panel sign-in for SmartStaff.
 //
 // The recruiter picks "Admin" or "User" — each role shows its own credential
 // field (email vs employee ID). They can flip to the Sign-Up panel if they
@@ -133,7 +133,7 @@ const Login = ({ mode = 'login' }) => {
             alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem',
             backdropFilter: 'blur(8px)',
           }}>G</div>
-          Geeky AI
+          SmartStaff
         </div>
 
         <div style={{ maxWidth: 460 }}>
@@ -154,7 +154,7 @@ const Login = ({ mode = 'login' }) => {
         </div>
 
         <div style={{ opacity: 0.7, fontSize: '0.82rem' }}>
-          © {new Date().getFullYear()} Geeky AI · HR Automation Suite
+          © {new Date().getFullYear()} SmartStaff · HR Automation Suite
         </div>
       </div>
 
@@ -178,7 +178,7 @@ const Login = ({ mode = 'login' }) => {
           </h2>
           <p style={{ marginTop: 6, color: 'var(--text-muted)', fontSize: '0.93rem' }}>
             {isSignup
-              ? 'Sign up to access the Geeky AI hiring suite.'
+              ? 'Sign up to access the SmartStaff hiring suite.'
               : 'Sign in to continue to your dashboard.'}
           </p>
         </div>

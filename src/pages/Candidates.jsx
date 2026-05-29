@@ -26,10 +26,10 @@ const readChats = () => {
 const scoreClass = (s) => (s >= INTERVIEW_THRESHOLD ? 'high' : 'low');
 
 const fallbackInterviewBody = (name) =>
-  `Dear ${name},\n\nThank you for your interest in the role. We are pleased to inform you that your profile has been shortlisted for the next stage of our selection process.\n\nAs the next step, please complete the online technical assessment shared with you.\n\nKind regards,\n\nTalent Acquisition Team\nGeeky AI`;
+  `Dear ${name},\n\nThank you for your interest in the role. We are pleased to inform you that your profile has been shortlisted for the next stage of our selection process.\n\nAs the next step, please complete the online technical assessment shared with you.\n\nKind regards,\n\nTalent Acquisition Team\nSmartStaff`;
 
 const fallbackRejectionBody = (name) =>
-  `Dear ${name},\n\nThank you for the time and effort you invested in applying for the role.\n\nAfter careful consideration, we have decided to move forward with other candidates whose backgrounds more closely align with the specific requirements of this opportunity at this time.\n\nWe will keep your profile on file for future opportunities.\n\nKind regards,\n\nTalent Acquisition Team\nGeeky AI`;
+  `Dear ${name},\n\nThank you for the time and effort you invested in applying for the role.\n\nAfter careful consideration, we have decided to move forward with other candidates whose backgrounds more closely align with the specific requirements of this opportunity at this time.\n\nWe will keep your profile on file for future opportunities.\n\nKind regards,\n\nTalent Acquisition Team\nSmartStaff`;
 
 /* =========================================================================
    Stage picker (click pill -> menu of stage choices)
@@ -567,7 +567,7 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
                     <strong style={{ color: '#854d0e' }}>OA assessment isn't built for this job yet</strong>
                   </div>
                   <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', margin: '0 0 12px 0', lineHeight: 1.55 }}>
-                    Pick where the questions should come from — Geeky AI will build Level 1, 2,
+                    Pick where the questions should come from — SmartStaff will build Level 1, 2,
                     and 3 question banks tailored to this job and embed the link in the email.
                   </p>
                   <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
@@ -847,10 +847,10 @@ const AssessmentResults = ({ submissions, passThreshold, onOpenAnswerKey, onRefr
   let emptyBody = 'Once shortlisted candidates open their assessment link and submit answers, their results will appear here.';
   if (!hasJD) {
     emptyTitle = 'No job description uploaded';
-    emptyBody = 'Go to the Voice Screening tab and upload a job description first — that\'s what builds the assessment.';
+    emptyBody = 'Go to the Resume Screening tab and upload a job description first — that\'s what builds the assessment.';
   } else if (!hasQuestions) {
     emptyTitle = 'Assessment not generated yet';
-    emptyBody = 'Re-upload the job description from the Voice Screening tab to build a fresh assessment.';
+    emptyBody = 'Re-upload the job description from the Resume Screening tab to build a fresh assessment.';
   }
 
   return (
@@ -1289,7 +1289,7 @@ const Candidates = () => {
       <div className="page-header">
         <div>
           <h1>Candidate Database</h1>
-          <p className="subtitle">All applicants Geeky AI has screened, ranked by fit score.</p>
+          <p className="subtitle">All applicants SmartStaff has screened, ranked by fit score.</p>
         </div>
         <a href={`${API_BASE}/api/download_report`} target="_blank" rel="noreferrer" className="btn-primary">
           <FiDownload /> Download Excel
@@ -1438,7 +1438,7 @@ const Candidates = () => {
           <div className="empty-state">
             <div className="icon-wrap"><FiUsers /></div>
             <h3>Your ATS is empty</h3>
-            <p>Once Geeky AI finishes screening resumes, every candidate shows up here.</p>
+            <p>Once SmartStaff finishes screening resumes, every candidate shows up here.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">
@@ -1609,7 +1609,7 @@ const InterviewTranscripts = ({ interviews, onView, onRefresh }) => {
           <div>
             <div style={{ fontWeight: 600, fontSize: '1rem' }}>L1 Interview Transcripts</div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              Voice interviews conducted by Geeky AI, ready to review.
+              Voice interviews conducted by SmartStaff, ready to review.
             </div>
           </div>
         </div>

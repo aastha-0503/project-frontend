@@ -92,7 +92,7 @@ const Dashboard = () => {
   const workflowSteps = [
     {
       n: 1, key: 'jd', title: 'Upload Job Description', to: '/screening',
-      desc: 'Drop a PDF/Word JD and Geeky AI extracts the required skills.',
+      desc: 'Drop a PDF/Word JD and SmartStaff extracts the required skills.',
       icon: FiFileText, done: jdCount > 0,
       metric: jdCount > 0 ? `${jdCount} JD${jdCount === 1 ? '' : 's'} on file` : 'Not started',
     },
@@ -116,7 +116,7 @@ const Dashboard = () => {
     },
     {
       n: 5, key: 'interview', title: 'AI Interview & Score',  to: '/candidates',
-      desc: 'Geeky AI calls the candidate for an L1 interview with PDF scorecard.',
+      desc: 'SmartStaff calls the candidate for an L1 interview with PDF scorecard.',
       icon: FiAward, done: passed > 0,
       metric: passed > 0 ? `${passed} qualified` : 'Awaiting results',
     },

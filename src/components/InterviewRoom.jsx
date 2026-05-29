@@ -130,7 +130,7 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
               }}
             />
             <div style={{ fontSize: '0.78rem', color: error ? 'var(--danger)' : 'var(--text-muted)', marginTop: 6 }}>
-              {error || 'Edit the number if needed. Geeky AI will use this to identify the call.'}
+              {error || 'Edit the number if needed. SmartStaff will use this to identify the call.'}
             </div>
           </div>
 
@@ -153,7 +153,7 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
               ))}
             </select>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 6 }}>
-              Geeky AI will ask the questions and listen in this language. Works in browser
+              SmartStaff will ask the questions and listen in this language. Works in browser
               mode (Chrome/Edge). The candidate's spoken language pack must be installed on
               this device for the most natural voice.
             </div>
@@ -163,14 +163,14 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
             <div className="assessment-callout" style={{ marginTop: 8, background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(6,182,212,0.05))', borderColor: 'rgba(16,185,129,0.3)' }}>
               <div className="ico" style={{ background: 'var(--success)' }}><FiPhone size={14} /></div>
               <div style={{ flex: 1, fontSize: '0.84rem' }}>
-                <strong>Real outbound phone call enabled (Twilio).</strong> Geeky AI will dial the candidate from {fromNumber || 'your configured Twilio number'} and conduct the interview entirely on the phone — no browser needed on their end.
+                <strong>Real outbound phone call enabled (Twilio).</strong> SmartStaff will dial the candidate from {fromNumber || 'your configured Twilio number'} and conduct the interview entirely on the phone — no browser needed on their end.
               </div>
             </div>
           ) : (
             <div className="assessment-callout" style={{ marginTop: 8 }}>
               <div className="ico"><FiVolume2 size={14} /></div>
               <div style={{ flex: 1, fontSize: '0.84rem' }}>
-                <strong>Browser-based voice interview.</strong> Geeky AI will speak the questions through your speakers and capture the candidate's answers via your microphone. For a real outbound phone call, set the Twilio env vars on the backend.
+                <strong>Browser-based voice interview.</strong> SmartStaff will speak the questions through your speakers and capture the candidate's answers via your microphone. For a real outbound phone call, set the Twilio env vars on the backend.
               </div>
             </div>
           )}
@@ -263,7 +263,7 @@ export const InterviewRoom = ({ candidate, phone, language = 'en-IN', onClose, o
     const matchesLang = chosen && (chosen.lang || '').toLowerCase().replace('_', '-').startsWith(base);
 
     if (chosen && pickedVoiceRef.current?.name !== chosen.name) {
-      console.log(`[Geeky AI Interview] lang=${target} → voice: ${chosen.name} (${chosen.lang})${matchesLang ? ' ✓' : ' (no exact match)'}`);
+      console.log(`[SmartStaff Interview] lang=${target} → voice: ${chosen.name} (${chosen.lang})${matchesLang ? ' ✓' : ' (no exact match)'}`);
       pickedVoiceRef.current = chosen;
     }
 
@@ -634,7 +634,7 @@ export const InterviewRoom = ({ candidate, phone, language = 'en-IN', onClose, o
                 </>
               ) : (
                 <div className="interview-question-text" style={{ color: 'var(--text-muted)' }}>
-                  Geeky AI is greeting the candidate…
+                  SmartStaff is greeting the candidate…
                 </div>
               )}
             </div>
@@ -643,7 +643,7 @@ export const InterviewRoom = ({ candidate, phone, language = 'en-IN', onClose, o
               stage === 'asking' || stage === 'intro' || stage === 'between' ? 'speaking' :
               stage === 'listening' ? 'listening' : 'idle'
             }`}>
-              {stage === 'asking' || stage === 'intro' || stage === 'between' ? <>🔊 Geeky AI is speaking…</> :
+              {stage === 'asking' || stage === 'intro' || stage === 'between' ? <>🔊 SmartStaff is speaking…</> :
                stage === 'listening' ? <>🎤 Listening to {candidate.Candidate_Name.split(' ')[0]}…</> :
                stage === 'saving' ? <>💾 Saving the interview…</> :
                stage === 'done' ? <>✅ Call ended — review and save when ready</> :
@@ -879,7 +879,7 @@ export const PhoneCallRoom = ({ candidate, phone, onClose, onSaved }) => {
             }`}>
               {callStatus === 'completed' ? '✅ Call ended — transcript saved automatically' :
                callStatus === 'failed' ? '⚠️ Could not complete the call' :
-               '📞 Geeky AI is on the call with the candidate'}
+               '📞 SmartStaff is on the call with the candidate'}
             </div>
 
             <div className="interview-controls">

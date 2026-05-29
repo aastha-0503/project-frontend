@@ -119,7 +119,7 @@ const Settings = () => {
   // ── Public URL + Twilio state ──
   // Both controls live in the same Settings page because they belong to the
   // same problem: "make the assessment link work outside localhost AND let
-  // Geeky AI place real phone calls." We persist both together via the
+  // SmartStaff place real phone calls." We persist both together via the
   // backend's /api/config endpoints.
   const [publicUrlInput, setPublicUrlInput] = useState('');
   const [savingPublicUrl, setSavingPublicUrl] = useState(false);
@@ -390,7 +390,7 @@ const Settings = () => {
     }
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(
-      "Hi, I'm Geeky AI, your AI recruiter. This is how I'll sound during screenings."
+      "Hi, I'm SmartStaff, your AI recruiter. This is how I'll sound during screenings."
     );
     const v = voices.find(v => v.name === settings.voiceName);
     if (v) u.voice = v;
@@ -700,7 +700,7 @@ ngrok http 8000`}
         </h3>
         <p className="subtitle" style={{ marginBottom: 18 }}>
           How long each candidate's unique OA link stays live after you send it.
-          Independent of which tunnel you use — the expiry is enforced by Geeky AI
+          Independent of which tunnel you use — the expiry is enforced by SmartStaff
           itself, so candidates see a clean "this link has expired" page after the window.
         </p>
 
@@ -760,7 +760,7 @@ ngrok http 8000`}
           <FiPhone color="var(--primary)" /> Phone calls (Twilio)
         </h3>
         <p className="subtitle" style={{ marginBottom: 18 }}>
-          Paste your Twilio credentials to let Geeky AI place <strong>real outbound phone calls</strong>
+          Paste your Twilio credentials to let SmartStaff place <strong>real outbound phone calls</strong>
           to candidates for the Level 1 interview. Without these, the interview falls back to
           browser-based voice mode (recruiter must stay on the line).
         </p>
@@ -849,7 +849,7 @@ ngrok http 8000`}
           />
           <span className="hint">
             Use the full international format (e.g. <code>+15551234567</code>). This is the
-            Twilio-owned number candidates will see when Geeky AI calls them.
+            Twilio-owned number candidates will see when SmartStaff calls them.
           </span>
         </div>
 
@@ -982,8 +982,8 @@ ngrok http 8000`}
           <FiDatabase color="var(--primary)" /> Question Bank
         </h3>
         <p className="subtitle" style={{ marginBottom: 18 }}>
-          Upload your own questions and Geeky AI can blend them into the OA assessments —
-          pick the source mode from the dropdown on the Voice Screening page when you
+          Upload your own questions and SmartStaff can blend them into the OA assessments —
+          pick the source mode from the dropdown on the Resume Screening page when you
           upload each JD.
         </p>
 
@@ -1095,7 +1095,7 @@ ngrok http 8000`}
       <div className="grid-2">
         <div className="card">
           <h3 style={{ margin: '0 0 4px 0', fontSize: '1.05rem', fontWeight: 600 }}>Voice</h3>
-          <p className="subtitle" style={{ marginBottom: 18 }}>Controls how Geeky AI sounds when it speaks.</p>
+          <p className="subtitle" style={{ marginBottom: 18 }}>Controls how SmartStaff sounds when it speaks.</p>
 
           {/* Master mute — applies everywhere (InterviewRoom, VoiceScreening, Settings test). */}
           <div className="form-group" style={{
@@ -1113,8 +1113,8 @@ ngrok http 8000`}
                 </div>
                 <div className="hint" style={{ marginTop: 2 }}>
                   {settings.botVoiceEnabled
-                    ? "Geeky AI will speak its replies out loud."
-                    : "Geeky AI will stay silent — text only. Useful in quiet environments."}
+                    ? "SmartStaff will speak its replies out loud."
+                    : "SmartStaff will stay silent — text only. Useful in quiet environments."}
                 </div>
               </div>
             </div>
@@ -1221,7 +1221,7 @@ ngrok http 8000`}
                 checked={settings.autoListen}
                 onChange={(e) => update({ autoListen: e.target.checked })}
               />
-              Auto-listen after Geeky AI finishes speaking (hands-free mode)
+              Auto-listen after SmartStaff finishes speaking (hands-free mode)
             </label>
           </div>
 

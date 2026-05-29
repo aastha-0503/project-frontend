@@ -61,7 +61,7 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
  *
  * Permission model:
  *   - Employees can access the full hiring workflow (Dashboard, Analytics,
- *     Voice Screening, Jobs, Candidates) — they just don't get to change
+ *     Resume Screening, Jobs, Candidates) — they just don't get to change
  *     system-level configuration.
  *   - Settings is admin-only: API keys, theme defaults, data resets,
  *     question bank uploads. */

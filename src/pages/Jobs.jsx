@@ -131,7 +131,7 @@ const Jobs = () => {
           <div className="empty-state">
             <div className="icon-wrap"><FiBriefcase /></div>
             <h3>No JDs uploaded yet</h3>
-            <p>Head to Voice Screening to upload your first job description. Each one gets a unique JD number and its own assessment links.</p>
+            <p>Head to Resume Screening to upload your first job description. Each one gets a unique JD number and its own assessment links.</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="empty-state">

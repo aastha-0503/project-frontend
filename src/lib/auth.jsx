@@ -1,4 +1,4 @@
-// Lightweight auth context for Geeky AI's two-panel sign-in.
+// Lightweight auth context for SmartStaff's two-panel sign-in.
 //
 // We persist the bearer token in localStorage so a refresh doesn't kick
 // the user back to the login page. The token is sent on every backend

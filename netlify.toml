@@ -1,4 +1,4 @@
-# Netlify build config for the Geeky AI frontend.
+# Netlify build config for the SmartStaff frontend.
 #
 # Deploy options:
 #   A) Frontend-only repo (you pushed just the `frontend/` contents) →

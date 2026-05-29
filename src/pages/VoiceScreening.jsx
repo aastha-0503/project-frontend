@@ -317,7 +317,7 @@ const SkillsOnlyModal = ({ open, onClose, onSubmit, busy }) => {
         <form onSubmit={submit}>
           <div className="modal-body">
             <p className="subtitle" style={{ marginTop: 0, marginBottom: 14 }}>
-              No JD doc? Just paste the skills you're hiring for — Geeky AI will
+              No JD doc? Just paste the skills you're hiring for — SmartStaff will
               treat every skill as critical and rank uploaded resumes against the list.
             </p>
             <div className="modal-field">
@@ -428,7 +428,7 @@ const SourcePromptButtons = ({ onPick, disabled }) => {
     {
       key: 'ai',
       title: 'AI-generated',
-      desc:  'Geeky AI writes every question for this role using Gemini.',
+      desc:  'SmartStaff writes every question for this role using Gemini.',
       icon:  FiCheckCircle,
       accent: '#4f46e5',
     },
@@ -522,7 +522,7 @@ const VoiceScreening = () => {
       title: 'New Session',
       messages: [{
         sender: 'bot',
-        text: "Hi! I'm Geeky AI, your AI recruiter. Upload a job description and the resumes you'd like screened, then tell me when you're ready to start."
+        text: "Hi! I'm SmartStaff, your AI recruiter. Upload a job description and the resumes you'd like screened, then tell me when you're ready to start."
       }]
     }];
   });
@@ -636,7 +636,7 @@ const VoiceScreening = () => {
     const ranked = [...list].sort((a, b) => scoreVoice(b) - scoreVoice(a));
     const chosen = ranked[0] || list[0];
     if (chosen && loggedVoiceRef.current !== chosen.name) {
-      console.log("[Geeky AI] Using voice:", chosen.name, `(${chosen.lang}) score=${scoreVoice(chosen)}`);
+      console.log("[SmartStaff] Using voice:", chosen.name, `(${chosen.lang}) score=${scoreVoice(chosen)}`);
       loggedVoiceRef.current = chosen.name;
     }
     return chosen;
@@ -825,7 +825,7 @@ const VoiceScreening = () => {
         command: rawText,
         session_id: currentJobId,
         platform_config: {
-          persona: 'Geeky AI, an elite Senior Tech Recruiter. The user may be speaking via voice-to-text, so be forgiving with typos and ASR errors. Keep replies under 3 sentences and warm in tone. When you finish screening, remind the user that they can click the Send Interview Invite buttons for candidates with score 80 or above, and Send Rejection for the rest.',
+          persona: 'SmartStaff, an elite Senior Tech Recruiter. The user may be speaking via voice-to-text, so be forgiving with typos and ASR errors. Keep replies under 3 sentences and warm in tone. When you finish screening, remind the user that they can click the Send Interview Invite buttons for candidates with score 80 or above, and Send Rejection for the rest.',
           industry: 'Human Resources and Hiring',
           available_tools: [{
             tag_name: 'PROCESS_RESUMES',
@@ -1036,7 +1036,7 @@ const VoiceScreening = () => {
     // uploading resumes. Both options live as inline buttons under one
     // bubble so the next step is unmissable.
     appendBotMessage(
-      `Before we screen candidates: do you want to upload your own questions to use in the OA assessment? It's optional — if you skip, Geeky AI will write the questions later.`,
+      `Before we screen candidates: do you want to upload your own questions to use in the OA assessment? It's optional — if you skip, SmartStaff will write the questions later.`,
       null,
       { speakIt: true, actions: [
         { kind: 'upload-bank',    label: 'Upload my question bank', icon: FiDatabase, note: 'optional · JSON/CSV/XLSX' },
@@ -1304,8 +1304,8 @@ const VoiceScreening = () => {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Voice Screening</h1>
-          <p className="subtitle">Talk to Geeky AI, your AI recruiter, and let it rank candidates for you.</p>
+          <h1>Resume Screening</h1>
+          <p className="subtitle">Talk to SmartStaff, your AI recruiter, and let it rank candidates for you.</p>
         </div>
       </div>
 
@@ -1409,7 +1409,7 @@ const VoiceScreening = () => {
             <div className="agent-info">
               <div className="agent-avatar">G</div>
               <div className="agent-meta">
-                <h3>Geeky AI</h3>
+                <h3>SmartStaff</h3>
                 <span>
                   <span className="pulse-dot" />
                   {isThinking ? 'Processing' : isSpeaking ? 'Speaking' : isListening ? 'Listening' : 'Online'}
@@ -1436,7 +1436,7 @@ const VoiceScreening = () => {
                     return !v;
                   });
                 }}
-                title={voiceEnabled ? 'Mute Geeky AI' : 'Unmute Geeky AI'}
+                title={voiceEnabled ? 'Mute SmartStaff' : 'Unmute SmartStaff'}
                 aria-label="Toggle voice"
               >
                 {voiceEnabled ? <FiVolume2 /> : <FiVolumeX />}
@@ -1511,7 +1511,7 @@ const VoiceScreening = () => {
                 <span /><span /><span /><span /><span />
               </span>
               {isSpeaking
-                ? <span>Geeky AI is speaking…</span>
+                ? <span>SmartStaff is speaking…</span>
                 : (
                   <span className="interim">
                     {interimTranscript || 'Listening… speak now.'}
@@ -1538,7 +1538,7 @@ const VoiceScreening = () => {
               onChange={(e) => setInputText(e.target.value)}
               placeholder={
                 isListening ? 'Listening…' :
-                isThinking ? 'Geeky AI is thinking…' :
+                isThinking ? 'SmartStaff is thinking…' :
                 'Type a message or tap the mic to speak'
               }
               disabled={isThinking}

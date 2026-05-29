@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  FiHome, FiMic, FiUsers, FiSettings, FiBarChart2, FiBriefcase,
+  FiHome, FiFileText, FiUsers, FiSettings, FiBarChart2, FiBriefcase,
   FiLogOut, FiShield, FiUser,
 } from 'react-icons/fi';
 import NotificationBell from './NotificationBell.jsx';
@@ -22,7 +22,7 @@ const Sidebar = () => {
       <div className="brand-header">
         <div className="brand-logo">G</div>
         <div className="brand-text">
-          <h2>Geeky AI</h2>
+          <h2>SmartStaff</h2>
           <small>HR Automation Suite</small>
         </div>
         <div style={{ marginLeft: 'auto' }}>
@@ -46,7 +46,7 @@ const Sidebar = () => {
       <div className="nav-section">
         <div className="nav-label">Workflow</div>
         <NavLink to="/screening" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
-          <FiMic /> <span style={{ flex: 1 }}>1 · Voice Screening</span>
+          <FiFileText /> <span style={{ flex: 1 }}>1 · Resume Screening</span>
         </NavLink>
         <NavLink to="/jobs" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
           <FiBriefcase /> <span style={{ flex: 1 }}>2 · Jobs</span>
