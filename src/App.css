@@ -514,6 +514,28 @@ body {
   margin: 18px 4px 8px 4px;
 }
 
+/* Highlight the "1. Upload Job Description" button when no JD has been
+   uploaded in the current session — draws the recruiter's eye on a fresh
+   session so they know where to start. The pulse stops naturally once
+   the JD lands (the highlight class is removed). */
+.action-btn-highlight {
+  background: linear-gradient(135deg, var(--primary, #4f46e5), var(--accent, #06b6d4)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  font-weight: 700;
+  box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.55);
+  animation: actionBtnPulse 1.6s ease-out infinite;
+}
+.action-btn-highlight:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+@keyframes actionBtnPulse {
+  0%   { box-shadow: 0 0 0 0   rgba(79, 70, 229, 0.55); }
+  70%  { box-shadow: 0 0 0 12px rgba(79, 70, 229, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(79, 70, 229, 0); }
+}
+
 /* Render the Dashboard's workflow stepper at the bottom of the page
    without rewriting 100+ lines of JSX. Flex + order pushes it past every
    sibling regardless of source order. */

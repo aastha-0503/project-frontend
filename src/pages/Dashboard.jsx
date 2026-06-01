@@ -330,7 +330,10 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Pipeline + Recent sessions */}
+      {/* Pipeline + Recent activity sections were intentionally removed per
+          product request — the stat cards, funnel, donut, and the Recent
+          sessions card below carry the same information more compactly. */}
+      {false && (
       <div className="grid-2">
         <div className="chart-card">
           <h3 className="chart-title">Pipeline at a glance</h3>
@@ -400,6 +403,8 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+
+      )}
 
       {/* Recent sessions */}
       {recentSessions.length > 0 && (

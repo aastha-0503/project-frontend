@@ -145,6 +145,9 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
   // the raw /assessment/JD-XXXX URL as a fallback so nothing breaks if the
   // backend is old.
   const [inviteUrls, setInviteUrls] = useState({});
+  // Combined invite URLs keyed by the sorted, comma-joined level set
+  // (e.g. "L1,L2" or "L1,L2,L3"). Minted on demand when 2+ levels are picked.
+  const [combinedUrls, setCombinedUrls] = useState({});
   const [inviteErr,  setInviteErr]  = useState('');
   // Hours the minted tokens will be valid — pulled from /api/config so the
   // email body says "valid for 48 hours" instead of a hard-coded duration.
@@ -163,6 +166,7 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
       );
       setBodyEdited(false);
       setInviteUrls({});
+      setCombinedUrls({});
       setInviteErr('');
     }
   }, [data]);
@@ -213,6 +217,44 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
     return () => { cancelled = true; };
   }, [data, activeJobId]);
 
+  // ── Combined invite: ONE link covering every selected level ─────────
+  // Whenever the recruiter ticks 2+ levels, mint a single token that bundles
+  // them into one assessment. The candidate sees no level structure on the
+  // resulting page, and we use this combined URL in the email instead of
+  // listing each level's link separately.
+  useEffect(() => {
+    if (!data?.row || !data?.isInterview) return;
+    const row = data.row;
+    const email = row.Email || '';
+    const jobId = row.Job_Id || row.job_id || row.session_id || activeJobId || '';
+    if (!email || !jobId) return;
+    const ordered = ['L1', 'L2', 'L3'].filter(L => selectedLevels.has(L));
+    if (ordered.length < 2) return;
+    const key = ordered.join(',');
+    if (combinedUrls[key]) return;   // already minted this exact combo
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await axios.post(`${API_BASE}/api/invites/mint`, {
+          session_id: jobId,
+          candidate_email: email,
+          candidate_name: row.Candidate_Name || '',
+          levels: ordered,
+          combined: true,
+        });
+        if (cancelled) return;
+        const inv = (res.data?.invites || [])[0];
+        if (inv?.url) {
+          setCombinedUrls(prev => ({ ...prev, [key]: inv.url }));
+        }
+      } catch {
+        // Falls back gracefully — the email composer will use per-level URLs.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [data, activeJobId, selectedLevels, combinedUrls]);
+
   // Recompute the auto-generated email body whenever the row or the recruiter's
   // level selection changes. Pushes the result into ``editBody`` UNLESS the
   // recruiter has manually edited it (then we leave their edit alone).
@@ -249,9 +291,25 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
         ? `${Math.round(inviteHours / 24)} day${Math.round(inviteHours / 24) === 1 ? '' : 's'}`
         : `${inviteHours} hour${inviteHours === 1 ? '' : 's'}`;
       const expiryNote = `⏱ This link is valid for ${hoursText} after delivery and can only be used once. Open it from a quiet space with your camera + microphone ready.`;
-      const links = levelUrls.length === 1
-        ? `As the next step, please complete the online technical assessment for this role. The assessment is designed to evaluate the core competencies required for the position and typically takes 15 to 20 minutes to complete.\n\nPlease access your assessment using the secure link below:\n\n  ${levelUrls[0].url}\n\n${expiryNote}`
-        : `As the next step, we'd like you to complete the following ${levelUrls.length} online assessments. Each is short (15–20 minutes) and focuses on a different proficiency level for this role:\n\n${levelUrls.map(L => `  • ${LEVEL_META[L.level].label} (${LEVEL_META[L.level].range}) — ${L.url}`).join('\n')}\n\n${expiryNote}`;
+      // Duration the candidate sees in the email — depends on level count.
+      const durationMinutes = levelUrls.length === 1 ? 60 : 30 * levelUrls.length;
+      // When the recruiter has picked 2+ levels we use a SINGLE combined link
+      // (minted in the combinedUrls effect above) so the candidate sees one
+      // assessment with no Level-1/2/3 chrome.
+      const combinedKey = orderedSelected.join(',');
+      const combinedUrl = levelUrls.length >= 2 ? combinedUrls[combinedKey] : '';
+
+      let links;
+      if (levelUrls.length === 1) {
+        links = `As the next step, please complete the online technical assessment for this role. The assessment takes approximately ${durationMinutes} minutes and evaluates the core competencies required for the position.\n\nPlease access your assessment using the secure link below:\n\n  ${levelUrls[0].url}\n\n${expiryNote}`;
+      } else if (combinedUrl) {
+        // Combined link ready — single unbranded assessment.
+        links = `As the next step, please complete the online technical assessment for this role. The assessment takes approximately ${durationMinutes} minutes and evaluates the core competencies required for the position.\n\nPlease access your assessment using the secure link below:\n\n  ${combinedUrl}\n\n${expiryNote}`;
+      } else {
+        // Combined invite is still being minted — show a brief placeholder so
+        // the body doesn't briefly fall back to the per-level layout.
+        links = `As the next step, please complete the online technical assessment for this role. The assessment takes approximately ${durationMinutes} minutes.\n\n  (preparing your link — please wait a moment…)\n\n${expiryNote}`;
+      }
       computed = computed.replace(
         /As the next step[\s\S]*?(?=Should you have any questions|We look forward|Kind regards|$)/i,
         links + '\n\n',
@@ -511,16 +569,27 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
                   })}
               </div>
 
-              {levelUrls.length > 0 && (
+              {levelUrls.length > 0 && (() => {
+                // Combined-link mode kicks in as soon as the recruiter picks
+                // 2+ levels. The candidate gets ONE unbranded assessment with
+                // a duration of 30 min per level (60 for two, 90 for three).
+                const isMulti       = levelUrls.length >= 2;
+                const combinedKey   = levelUrls.map(L => L.level).join(',');
+                const combinedUrl   = isMulti ? combinedUrls[combinedKey] : '';
+                const durationMins  = levelUrls.length === 1 ? 60 : 30 * levelUrls.length;
+                return (
                 <div className="assessment-callout" style={{ marginTop: 14 }}>
                   <div className="ico"><FiExternalLink size={14} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <strong>
-                      {levelUrls.length === 1
-                        ? `${LEVEL_META[levelUrls[0].level].short} assessment`
-                        : `${levelUrls.length} assessments will be included`}
+                      {isMulti ? 'Combined assessment' : `${LEVEL_META[levelUrls[0].level].short} assessment`}
                     </strong>
-                    {' '}— MCQ + MSQ + coding questions (C / C++ / Java / Python), 60-minute proctored window.
+                    {' '}— MCQ + MSQ + coding questions (C / C++ / Java / Python), {durationMins}-minute proctored window.
+                    {isMulti && (
+                      <div style={{ marginTop: 4, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        Bundled into one link covering {levelUrls.map(L => LEVEL_META[L.level].short).join(' + ')} — the candidate sees a single unbranded assessment, no level structure.
+                      </div>
+                    )}
                     <div style={{
                       marginTop: 6, padding: '6px 10px',
                       background: 'rgba(245,158,11,0.08)',
@@ -528,22 +597,37 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
                       borderRadius: 6, fontSize: '0.76rem', color: '#854d0e',
                       display: 'flex', alignItems: 'center', gap: 6,
                     }}>
-                      ⏱ Each link is unique to this candidate · expires in {inviteHours >= 24 ? `${Math.round(inviteHours / 24)} day${Math.round(inviteHours / 24) === 1 ? '' : 's'}` : `${inviteHours} hour${inviteHours === 1 ? '' : 's'}`} · single-use only.
+                      ⏱ Unique to this candidate · expires in {inviteHours >= 24 ? `${Math.round(inviteHours / 24)} day${Math.round(inviteHours / 24) === 1 ? '' : 's'}` : `${inviteHours} hour${inviteHours === 1 ? '' : 's'}`} · single-use only.
                     </div>
                     <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      {levelUrls.map(({ level: L, url, is_invite }) => (
-                        <div key={L} style={{ fontSize: '0.84rem' }}>
-                          <strong style={{ color: LEVEL_META[L].accent }}>{LEVEL_META[L].short}</strong>:{' '}
-                          <a href={url} target="_blank" rel="noreferrer" style={{ wordBreak: 'break-all' }}>
-                            {url}
-                          </a>
-                          {!is_invite && (
-                            <span style={{ marginLeft: 8, fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                              · per-candidate token not minted (using fallback URL)
-                            </span>
-                          )}
-                        </div>
-                      ))}
+                      {isMulti ? (
+                        combinedUrl ? (
+                          <div style={{ fontSize: '0.84rem' }}>
+                            <strong style={{ color: 'var(--primary)' }}>Assessment</strong>:{' '}
+                            <a href={combinedUrl} target="_blank" rel="noreferrer" style={{ wordBreak: 'break-all' }}>
+                              {combinedUrl}
+                            </a>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            Preparing the combined link…
+                          </div>
+                        )
+                      ) : (
+                        levelUrls.map(({ level: L, url, is_invite }) => (
+                          <div key={L} style={{ fontSize: '0.84rem' }}>
+                            <strong style={{ color: LEVEL_META[L].accent }}>{LEVEL_META[L].short}</strong>:{' '}
+                            <a href={url} target="_blank" rel="noreferrer" style={{ wordBreak: 'break-all' }}>
+                              {url}
+                            </a>
+                            {!is_invite && (
+                              <span style={{ marginLeft: 8, fontSize: '0.7rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                                · per-candidate token not minted (using fallback URL)
+                              </span>
+                            )}
+                          </div>
+                        ))
+                      )}
                     </div>
                     {inviteErr && (
                       <div style={{ marginTop: 6, fontSize: '0.76rem', color: '#991b1b' }}>
@@ -552,7 +636,8 @@ const EmailPreviewModal = ({ data, onClose, onRowUpdate, activeJobId }) => {
                     )}
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* ── No-URL state: generate the OA right here ─────────────── */}
               {needsGeneration && (

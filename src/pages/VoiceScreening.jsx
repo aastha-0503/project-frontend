@@ -1364,7 +1364,7 @@ const VoiceScreening = () => {
               onChange={handleQuestionBankUpload}
             />
             <button
-              className="action-btn"
+              className={`action-btn ${!uploads.jd ? 'action-btn-highlight' : ''}`}
               onClick={() => jdInputRef.current?.click()}
               disabled={isThinking}
             >
