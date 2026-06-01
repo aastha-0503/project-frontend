@@ -137,7 +137,7 @@ const Dashboard = () => {
       </div>
 
       {/* ── Workflow stepper ─────────────────────────────────────────── */}
-      <div className="workflow-stepper" style={{
+      <div className="workflow-stepper dashboard-workflow" style={{
         background: 'var(--bg-surface)',
         border: '1px solid var(--border-color)',
         borderRadius: 'var(--radius)',

@@ -514,6 +514,19 @@ body {
   margin: 18px 4px 8px 4px;
 }
 
+/* Render the Dashboard's workflow stepper at the bottom of the page
+   without rewriting 100+ lines of JSX. Flex + order pushes it past every
+   sibling regardless of source order. */
+.page-container:has(.dashboard-workflow) {
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-workflow {
+  order: 99;
+  margin-top: 22px !important;
+  margin-bottom: 0 !important;
+}
+
 .history-item {
   padding: 10px 12px;
   border-radius: var(--radius);
@@ -523,18 +536,24 @@ body {
   justify-content: space-between;
   font-size: 0.88rem;
   color: var(--text-main);
+  /* Fade non-active sessions so the active one visually dominates. */
+  opacity: 0.55;
+  transition: opacity 0.15s, background 0.15s, transform 0.15s;
   transition: var(--transition);
   margin-bottom: 2px;
 }
 
 .history-item:hover {
   background: var(--bg-subtle);
+  opacity: 0.85;       /* lift the fade on hover so it's clearly clickable */
 }
 
 .history-item.active {
   background: var(--primary-soft);
   color: var(--primary);
   font-weight: 600;
+  opacity: 1;          /* the selected chat is fully opaque + emphasised */
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .history-item .icon-btn {

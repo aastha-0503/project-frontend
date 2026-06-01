@@ -2,39 +2,95 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   FiBarChart2, FiTarget, FiAward, FiUsers, FiCheckCircle, FiActivity,
-  FiFileText, FiClock
+  FiFileText, FiClock, FiBriefcase, FiUser
 } from 'react-icons/fi';
 import {
   API_BASE, getActiveJobId, INTERVIEW_THRESHOLD, ASSESSMENT_PASS_PERCENT,
   loadCandidateState, getStage, STAGES, relativeTime
 } from '../lib/enterprise.js';
 import { Donut, Funnel, Histogram, HorizontalBars, Sparkline } from '../components/Charts.jsx';
+import { useAuth } from '../lib/auth.jsx';
 
 const readChats = () => {
   try { return JSON.parse(localStorage.getItem('geeky_ai_chats') || '[]'); } catch { return []; }
 };
 
 const Analytics = () => {
+  const { account } = useAuth();
+  const isAdmin = account?.role === 'admin';
+
   const [chats, setChats] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [activity, setActivity] = useState([]);
   const candidateState = useMemo(() => loadCandidateState(), []);
 
+  // ── Job/owner selection ───────────────────────────────────────────────
+  // Employees only see their own JDs (the backend enforces this); admins
+  // see every JD and additionally get an Employee filter dropdown that
+  // narrows the JD list to one uploader at a time.
+  const [jobs, setJobs] = useState([]);
+  const [ownerFilter, setOwnerFilter] = useState('');     // admin-only
+  const [selectedJobId, setSelectedJobId] = useState(getActiveJobId());
+
   useEffect(() => { setChats(readChats()); }, []);
 
+  // Load the visible jobs once (the backend already filters for employees).
   useEffect(() => {
-    const load = async () => {
+    let alive = true;
+    axios.get(`${API_BASE}/api/jobs`)
+      .then(r => { if (alive) setJobs(r.data?.jobs || []); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  // Unique employees seen on the admin's job list — drives the employee dropdown.
+  const employeeOptions = useMemo(() => {
+    if (!isAdmin) return [];
+    const seen = new Map();
+    jobs.forEach(j => {
+      if (!j.owner_id) return;
+      if (!seen.has(j.owner_id)) {
+        seen.set(j.owner_id, {
+          id:   j.owner_id,
+          name: j.owner_name || j.owner_email || j.owner_id,
+          role: j.owner_role || '',
+        });
+      }
+    });
+    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [isAdmin, jobs]);
+
+  // JDs to show in the JD dropdown — filtered by employee for admins.
+  const visibleJobs = useMemo(() => {
+    if (!isAdmin || !ownerFilter) return jobs;
+    return jobs.filter(j => (j.owner_id || '').toLowerCase() === ownerFilter.toLowerCase());
+  }, [jobs, isAdmin, ownerFilter]);
+
+  // Keep selection valid when the visible JDs change.
+  useEffect(() => {
+    if (visibleJobs.length === 0) return;
+    if (!visibleJobs.find(j => j.job_id === selectedJobId)) {
+      setSelectedJobId(visibleJobs[0].job_id);
+    }
+  }, [visibleJobs, selectedJobId]);
+
+  // Fetch submissions + activity for the SELECTED job whenever it changes.
+  useEffect(() => {
+    if (!selectedJobId) { setSubmissions([]); setActivity([]); return; }
+    let alive = true;
+    (async () => {
       try {
         const [subs, act] = await Promise.all([
-          axios.get(`${API_BASE}/api/assessment/submissions/${getActiveJobId()}`),
-          axios.get(`${API_BASE}/api/activity/${getActiveJobId()}?limit=50`),
+          axios.get(`${API_BASE}/api/assessment/submissions/${selectedJobId}`),
+          axios.get(`${API_BASE}/api/activity/${selectedJobId}?limit=50`),
         ]);
+        if (!alive) return;
         setSubmissions(subs.data.submissions || []);
         setActivity(act.data.activity || []);
       } catch {}
-    };
-    load();
-  }, []);
+    })();
+    return () => { alive = false; };
+  }, [selectedJobId]);
 
   // ---- aggregate from chats/submissions ----
   const allCandidates = useMemo(() => {
@@ -110,8 +166,61 @@ const Analytics = () => {
       <div className="page-header">
         <div>
           <h1>Analytics</h1>
-          <p className="subtitle">Real-time hiring funnel and skill insights pulled from your screening data.</p>
+          <p className="subtitle">
+            {isAdmin
+              ? 'Drill into any employee or any single job description.'
+              : 'Pick one of your job descriptions to see its hiring funnel.'}
+          </p>
         </div>
+      </div>
+
+      {/* ── Filters ─────────────────────────────────────────────────── */}
+      <div className="card" style={{
+        padding: 14, marginBottom: 18,
+        display: 'grid',
+        gridTemplateColumns: isAdmin ? 'minmax(220px,1fr) minmax(260px,2fr)' : '1fr',
+        gap: 12,
+      }}>
+        {isAdmin && (
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <FiUser size={12} /> Employee
+            </span>
+            <select
+              value={ownerFilter}
+              onChange={e => setOwnerFilter(e.target.value)}
+              style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '0.92rem' }}
+            >
+              <option value="">All employees ({employeeOptions.length})</option>
+              {employeeOptions.map(e => (
+                <option key={e.id} value={e.id}>
+                  {e.name} {e.role === 'admin' ? '· admin' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FiBriefcase size={12} /> Job description
+          </span>
+          <select
+            value={selectedJobId || ''}
+            onChange={e => setSelectedJobId(e.target.value)}
+            style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid var(--border-color)', background: 'var(--bg-surface)', color: 'var(--text-main)', fontSize: '0.92rem' }}
+          >
+            {visibleJobs.length === 0 ? (
+              <option value="">No job descriptions yet</option>
+            ) : (
+              visibleJobs.map(j => (
+                <option key={j.job_id} value={j.job_id}>
+                  {j.jd_number_display ? `${j.jd_number_display} · ` : ''}{j.jd_title || j.role_title || j.job_id}
+                  {isAdmin && j.owner_name ? ` — ${j.owner_name}` : ''}
+                </option>
+              ))
+            )}
+          </select>
+        </label>
       </div>
 
       {/* Top stat cards */}

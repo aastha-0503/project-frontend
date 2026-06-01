@@ -3,17 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   FiBriefcase, FiSearch, FiExternalLink, FiClipboard, FiCheckCircle,
-  FiTrash2, FiArrowRight, FiX, FiUsers, FiAward, FiFileText, FiInfo,
+  FiTrash2, FiArrowRight, FiX, FiUsers, FiAward, FiFileText, FiInfo, FiUser,
 } from 'react-icons/fi';
 import {
   API_BASE, setActiveJobId, getActiveJobId, relativeTime,
 } from '../lib/enterprise.js';
+import { useAuth } from '../lib/auth.jsx';
 
 const JOBS_PER_PAGE = 25;
 
 const Jobs = () => {
+  const { account } = useAuth();
+  const isAdmin = account?.role === 'admin';
+
   const [jobs, setJobs]       = useState([]);
   const [query, setQuery]     = useState('');
+  const [ownerFilter, setOwnerFilter] = useState('');     // admin-only
   const [loading, setLoading] = useState(true);
   const [detail, setDetail]   = useState(null);            // { ...full job }
   const [activeId, setActiveId] = useState(getActiveJobId());
@@ -36,10 +41,29 @@ const Jobs = () => {
     return () => clearInterval(id);
   }, [fetchJobs]);
 
+  // Employee dropdown options — derived from the visible job list.
+  const employeeOptions = useMemo(() => {
+    if (!isAdmin) return [];
+    const seen = new Map();
+    jobs.forEach(j => {
+      if (!j.owner_id) return;
+      if (!seen.has(j.owner_id)) {
+        seen.set(j.owner_id, {
+          id:   j.owner_id,
+          name: j.owner_name || j.owner_email || j.owner_id,
+          role: j.owner_role || '',
+        });
+      }
+    });
+    return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [isAdmin, jobs]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return jobs;
+    const owner = (ownerFilter || '').toLowerCase();
     return jobs.filter(j => {
+      if (isAdmin && owner && (j.owner_id || '').toLowerCase() !== owner) return false;
+      if (!q) return true;
       // JD number — match "23", "JD-23", "JD-0023", "0023"
       const numStr = j.jd_number_display || '';
       const justNum = String(j.jd_number || '');
@@ -49,9 +73,11 @@ const Jobs = () => {
       if ((j.role_title || '').toLowerCase().includes(q)) return true;
       if ((j.jd_filename || '').toLowerCase().includes(q)) return true;
       if ((j.skills || []).some(s => s.toLowerCase().includes(q))) return true;
+      if (isAdmin && (j.owner_name || '').toLowerCase().includes(q)) return true;
+      if (isAdmin && (j.owner_email || '').toLowerCase().includes(q)) return true;
       return false;
     });
-  }, [jobs, query]);
+  }, [jobs, query, ownerFilter, isAdmin]);
 
   const openDetail = async (job) => {
     try {
@@ -118,6 +144,26 @@ const Jobs = () => {
               fontFamily: 'inherit', background: 'transparent', color: 'var(--text-main)',
             }}
           />
+          {isAdmin && (
+            <select
+              value={ownerFilter}
+              onChange={e => setOwnerFilter(e.target.value)}
+              title="Filter by uploader"
+              style={{
+                padding: '8px 12px', borderRadius: 10,
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-surface)', color: 'var(--text-main)',
+                fontSize: '0.88rem', fontFamily: 'inherit',
+              }}
+            >
+              <option value="">All employees</option>
+              {employeeOptions.map(e => (
+                <option key={e.id} value={e.id}>
+                  👤 {e.name}{e.role === 'admin' ? ' · admin' : ''}
+                </option>
+              ))}
+            </select>
+          )}
           <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
             {filtered.length} of {jobs.length} job{jobs.length === 1 ? '' : 's'}
           </span>
@@ -148,6 +194,7 @@ const Jobs = () => {
                 <tr>
                   <th style={{ width: 96 }}>JD #</th>
                   <th>Role / title</th>
+                  {isAdmin && <th style={{ width: 150 }}>Uploaded by</th>}
                   <th style={{ textAlign: 'center', width: 90 }}>Skills</th>
                   <th style={{ textAlign: 'center', width: 110 }}>Candidates</th>
                   <th style={{ textAlign: 'center', width: 110 }}>Submissions</th>
@@ -193,6 +240,23 @@ const Jobs = () => {
                           </div>
                         )}
                       </td>
+                      {isAdmin && (
+                        <td>
+                          {job.owner_name || job.owner_id ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+                              <FiUser size={11} style={{ color: 'var(--text-muted)' }} />
+                              <span>
+                                {job.owner_name || job.owner_id}
+                                {job.owner_role === 'admin' && (
+                                  <span style={{ marginLeft: 6, fontSize: '0.7rem', fontWeight: 700, color: 'var(--primary)' }}>admin</span>
+                                )}
+                              </span>
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>
+                          )}
+                        </td>
+                      )}
                       <td style={{ textAlign: 'center' }}>
                         <span className="summary-pill" style={{
                           padding: '3px 9px',

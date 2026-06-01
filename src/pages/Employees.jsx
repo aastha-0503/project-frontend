@@ -29,6 +29,7 @@ const Employees = () => {
   const [admins,  setAdmins]    = useState([]);
   const [users,   setUsers]     = useState([]);
   const [filter,  setFilter]    = useState('');
+  const [jdsByOwner, setJdsByOwner] = useState({});   // ownerId -> count
 
   // New-admin form state.
   const [showAdd, setShowAdd]   = useState(false);
@@ -42,9 +43,20 @@ const Employees = () => {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const res = await axios.get(`${API_BASE}/api/auth/accounts`);
-      setAdmins(res.data?.admins || []);
-      setUsers(res.data?.users || []);
+      const [accRes, jobsRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/auth/accounts`),
+        axios.get(`${API_BASE}/api/jobs`).catch(() => ({ data: { jobs: [] } })),
+      ]);
+      setAdmins(accRes.data?.admins || []);
+      setUsers(accRes.data?.users || []);
+      // Tally JDs per owner so the table shows "X JDs uploaded" per employee.
+      const counts = {};
+      (jobsRes.data?.jobs || []).forEach(j => {
+        const k = (j.owner_id || '').toLowerCase();
+        if (!k) return;
+        counts[k] = (counts[k] || 0) + 1;
+      });
+      setJdsByOwner(counts);
     } catch (e) {
       setError(e?.response?.data?.message || 'Could not load accounts.');
     } finally {
@@ -166,11 +178,11 @@ const Employees = () => {
         </div>
       )}
 
-      <Section title="Employees" icon={<FiUser />} rows={filtered} loading={loading} emptyHint={filter ? 'No matches.' : 'No employees have signed up yet.'} />
+      <Section title="Employees" icon={<FiUser />} rows={filtered} loading={loading} emptyHint={filter ? 'No matches.' : 'No employees have signed up yet.'} jdsByOwner={jdsByOwner} />
 
       <div style={{ height: 24 }} />
 
-      <Section title="Admins" icon={<FiShield />} rows={admins} loading={loading} emptyHint="No admin accounts." identifierKey="email" />
+      <Section title="Admins" icon={<FiShield />} rows={admins} loading={loading} emptyHint="No admin accounts." identifierKey="email" jdsByOwner={jdsByOwner} />
     </div>
   );
 };
@@ -185,7 +197,7 @@ const inputStyle = {
   outline: 'none',
 };
 
-const Section = ({ title, icon, rows, loading, emptyHint, identifierKey = 'employee_id' }) => (
+const Section = ({ title, icon, rows, loading, emptyHint, identifierKey = 'employee_id', jdsByOwner = {} }) => (
   <div style={{ border: '1px solid var(--border-color)', borderRadius: 12, overflow: 'hidden', background: 'var(--bg-surface)' }}>
     <div style={{
       display: 'flex', alignItems: 'center', gap: 8,
@@ -206,6 +218,7 @@ const Section = ({ title, icon, rows, loading, emptyHint, identifierKey = 'emplo
             <th style={th}>Name</th>
             <th style={th}>{identifierKey === 'email' ? 'Email' : 'Employee ID'}</th>
             <th style={th}>Email</th>
+            <th style={th}>JDs uploaded</th>
             <th style={th}>Last seen</th>
             <th style={th}>Last login</th>
           </tr>
@@ -213,6 +226,8 @@ const Section = ({ title, icon, rows, loading, emptyHint, identifierKey = 'emplo
         <tbody>
           {rows.map((r, i) => {
             const online = isOnline(r.last_seen_at);
+            const ownerKey = ((r[identifierKey] || r.email || '') + '').toLowerCase();
+            const jdCount = jdsByOwner[ownerKey] || 0;
             return (
               <tr key={(r[identifierKey] || r.email || i) + ''} style={{ borderTop: '1px solid var(--border-color)' }}>
                 <td style={td}>
@@ -235,6 +250,20 @@ const Section = ({ title, icon, rows, loading, emptyHint, identifierKey = 'emplo
                   {r.email
                     ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><FiMail size={12} /> {r.email}</span>
                     : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                </td>
+                <td style={td}>
+                  {jdCount > 0 ? (
+                    <span style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '2px 8px', borderRadius: 999,
+                      background: 'rgba(79,70,229,0.10)', color: 'var(--primary, #4f46e5)',
+                      fontWeight: 600, fontSize: '0.82rem',
+                    }}>
+                      {jdCount}
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)' }}>0</span>
+                  )}
                 </td>
                 <td style={td}>{relativeTime(r.last_seen_at) || <span style={{ color: 'var(--text-muted)' }}>never</span>}</td>
                 <td style={td}>{relativeTime(r.last_login_at) || <span style={{ color: 'var(--text-muted)' }}>never</span>}</td>
