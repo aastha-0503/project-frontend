@@ -1602,41 +1602,9 @@ const Candidates = () => {
                               border: '1px solid var(--primary)',
                             }}
                             onClick={() => setPhoneConfirmFor(row)}
-                            title="Start a voice L1 interview"
+                            title="Conduct the L1 — phone call, in-app voice, or send the candidate a self-service link"
                           >
                             <FiPhone /> Interview
-                          </button>
-                          <button
-                            type="button"
-                            className="email-action"
-                            style={{
-                              background: 'var(--bg-surface)',
-                              color: 'var(--accent, #06b6d4)',
-                              border: '1px solid var(--accent, #06b6d4)',
-                            }}
-                            onClick={async () => {
-                              const jobId = row.Job_Id || row.job_id || row.session_id || activeJobId || '';
-                              if (!row.Email || !jobId) {
-                                alert('Candidate needs an email and an active job to receive a self-service interview link.');
-                                return;
-                              }
-                              setInterviewLinkModal({ candidate: row, url: '', busy: true, error: '' });
-                              try {
-                                const res = await axios.post(`${API_BASE}/api/interview/invites/mint`, {
-                                  session_id: jobId,
-                                  candidate_email: row.Email,
-                                  candidate_name: row.Candidate_Name || '',
-                                  phone: row.Phone || '',
-                                  file_name: row.File_Name || '',
-                                });
-                                setInterviewLinkModal({ candidate: row, url: res.data?.url || '', busy: false, error: '' });
-                              } catch (e) {
-                                setInterviewLinkModal({ candidate: row, url: '', busy: false, error: e?.response?.data?.message || 'Could not generate the interview link.' });
-                              }
-                            }}
-                            title="Generate a browser-based self-service interview link the candidate can open from anywhere"
-                          >
-                            <FiVolume2 /> AI interview link
                           </button>
                         </div>
                       </td>
@@ -1683,7 +1651,33 @@ const Candidates = () => {
       <PhoneConfirmModal
         candidate={phoneConfirmFor}
         onClose={() => setPhoneConfirmFor(null)}
-        onConfirm={(phone, mode, language) => {
+        onConfirm={async (phone, mode, language) => {
+          // candidate_link → mint a tokenised self-service URL and pop the
+          // copy/email modal instead of opening an in-app interview session.
+          if (mode === 'candidate_link') {
+            const row = phoneConfirmFor;
+            setPhoneConfirmFor(null);
+            const jobId = row?.Job_Id || row?.job_id || row?.session_id || activeJobId || '';
+            if (!row?.Email || !jobId) {
+              alert('Candidate needs an email and an active job to receive a self-service interview link.');
+              return;
+            }
+            setInterviewLinkModal({ candidate: row, url: '', busy: true, error: '' });
+            try {
+              const res = await axios.post(`${API_BASE}/api/interview/invites/mint`, {
+                session_id: jobId,
+                candidate_email: row.Email,
+                candidate_name: row.Candidate_Name || '',
+                phone: phone || row.Phone || '',
+                file_name: row.File_Name || '',
+                language: language || 'en-IN',
+              });
+              setInterviewLinkModal({ candidate: row, url: res.data?.url || '', busy: false, error: '' });
+            } catch (e) {
+              setInterviewLinkModal({ candidate: row, url: '', busy: false, error: e?.response?.data?.message || 'Could not generate the interview link.' });
+            }
+            return;
+          }
           setInterviewSession({ candidate: phoneConfirmFor, phone, mode: mode || 'browser', language: language || 'en-IN' });
           setPhoneConfirmFor(null);
         }}
