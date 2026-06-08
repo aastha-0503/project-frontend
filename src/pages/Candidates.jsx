@@ -1672,9 +1672,28 @@ const Candidates = () => {
                 file_name: row.File_Name || '',
                 language: language || 'en-IN',
               });
-              setInterviewLinkModal({ candidate: row, url: res.data?.url || '', busy: false, error: '' });
+              // The backend can come back 200 with status=error (the prep
+              // step has its own JSONResponse error path); surface those.
+              if (res.data?.status === 'error') {
+                setInterviewLinkModal({ candidate: row, url: '', busy: false, error: res.data.message || 'Backend rejected the mint.' });
+                return;
+              }
+              if (!res.data?.url) {
+                setInterviewLinkModal({ candidate: row, url: '', busy: false, error: `Mint succeeded but the URL is empty. Check PUBLIC_BASE_URL on Render. Raw response: ${JSON.stringify(res.data).slice(0, 200)}` });
+                return;
+              }
+              setInterviewLinkModal({ candidate: row, url: res.data.url, busy: false, error: '' });
             } catch (e) {
-              setInterviewLinkModal({ candidate: row, url: '', busy: false, error: e?.response?.data?.message || 'Could not generate the interview link.' });
+              const status = e?.response?.status;
+              const apiMsg = e?.response?.data?.message || e?.response?.data?.detail;
+              const netMsg = e?.message;
+              const msg = apiMsg
+                ? `${apiMsg} (HTTP ${status})`
+                : status
+                  ? `Backend returned HTTP ${status}. Endpoint may not be deployed yet, or it crashed — check Render logs.`
+                  : `Could not reach the backend at ${API_BASE}. ${netMsg || ''}`;
+              console.error('[AI interview mint] failure:', e);
+              setInterviewLinkModal({ candidate: row, url: '', busy: false, error: msg });
             }
             return;
           }
