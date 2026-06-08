@@ -1193,6 +1193,7 @@ const Candidates = () => {
   const [compareIds, setCompareIds] = useState(new Set());
   const [compareModal, setCompareModal] = useState(null);
   const [phoneConfirmFor, setPhoneConfirmFor] = useState(null);  // candidate row
+  const [interviewLinkModal, setInterviewLinkModal] = useState(null); // { candidate, url, busy, error }
   const [interviewSession, setInterviewSession] = useState(null); // { candidate, phone, mode }
   const [interviews, setInterviews] = useState([]);
   const [transcriptView, setTranscriptView] = useState(null);     // a saved interview record
@@ -1605,6 +1606,38 @@ const Candidates = () => {
                           >
                             <FiPhone /> Interview
                           </button>
+                          <button
+                            type="button"
+                            className="email-action"
+                            style={{
+                              background: 'var(--bg-surface)',
+                              color: 'var(--accent, #06b6d4)',
+                              border: '1px solid var(--accent, #06b6d4)',
+                            }}
+                            onClick={async () => {
+                              const jobId = row.Job_Id || row.job_id || row.session_id || activeJobId || '';
+                              if (!row.Email || !jobId) {
+                                alert('Candidate needs an email and an active job to receive a self-service interview link.');
+                                return;
+                              }
+                              setInterviewLinkModal({ candidate: row, url: '', busy: true, error: '' });
+                              try {
+                                const res = await axios.post(`${API_BASE}/api/interview/invites/mint`, {
+                                  session_id: jobId,
+                                  candidate_email: row.Email,
+                                  candidate_name: row.Candidate_Name || '',
+                                  phone: row.Phone || '',
+                                  file_name: row.File_Name || '',
+                                });
+                                setInterviewLinkModal({ candidate: row, url: res.data?.url || '', busy: false, error: '' });
+                              } catch (e) {
+                                setInterviewLinkModal({ candidate: row, url: '', busy: false, error: e?.response?.data?.message || 'Could not generate the interview link.' });
+                              }
+                            }}
+                            title="Generate a browser-based self-service interview link the candidate can open from anywhere"
+                          >
+                            <FiVolume2 /> AI interview link
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1675,6 +1708,66 @@ const Candidates = () => {
       )}
 
       <InterviewTranscriptModal data={transcriptView} onClose={() => setTranscriptView(null)} />
+
+      {interviewLinkModal && (
+        <div
+          onClick={() => setInterviewLinkModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-main)', maxWidth: 520, width: '100%', borderRadius: 14, padding: 24, boxShadow: '0 20px 60px rgba(15,23,42,0.30)' }}>
+            <h2 style={{ marginTop: 0, marginBottom: 6, fontSize: '1.15rem' }}>AI interview link</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: 0, marginBottom: 14 }}>
+              Send this link to <strong>{interviewLinkModal.candidate?.Candidate_Name || interviewLinkModal.candidate?.Email}</strong>. They open it in any browser (Chrome / Edge), grant microphone access, and the AI conducts the L1 interview right in the page — no phone call needed.
+            </p>
+            {interviewLinkModal.busy && (
+              <div style={{ padding: '14px 16px', background: 'var(--bg-subtle)', borderRadius: 10, color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Generating the link and preparing questions… this can take 10–30 seconds.
+              </div>
+            )}
+            {interviewLinkModal.error && (
+              <div style={{ padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)', color: '#991b1b', borderRadius: 8, fontSize: '0.86rem' }}>
+                {interviewLinkModal.error}
+              </div>
+            )}
+            {interviewLinkModal.url && (
+              <>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '10px 12px', background: 'var(--bg-subtle)', border: '1px solid var(--border-color)', borderRadius: 10, marginBottom: 10 }}>
+                  <code style={{ flex: 1, fontSize: '0.84rem', wordBreak: 'break-all', color: 'var(--text-main)' }}>{interviewLinkModal.url}</code>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(interviewLinkModal.url);
+                        setInterviewLinkModal(m => m ? { ...m, copied: true } : m);
+                        setTimeout(() => setInterviewLinkModal(m => m ? { ...m, copied: false } : m), 1500);
+                      } catch {}
+                    }}
+                  >
+                    {interviewLinkModal.copied ? '✓ Copied' : 'Copy'}
+                  </button>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                  ⏱ Link is single-use and follows your global invite TTL (Settings → Invite link expiry). Once the candidate finishes the interview the link automatically stops working.
+                </div>
+              </>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18, gap: 8 }}>
+              {interviewLinkModal.url && (
+                <a
+                  href={`mailto:${interviewLinkModal.candidate?.Email || ''}?subject=${encodeURIComponent('Your SmartStaff L1 Interview')}&body=${encodeURIComponent(`Hi ${interviewLinkModal.candidate?.Candidate_Name || 'there'},\n\nYour AI-conducted L1 interview is ready. Please open the link below in Chrome or Edge from a quiet place and grant microphone access when prompted:\n\n${interviewLinkModal.url}\n\nThe interview takes about 10–15 minutes. The link is single-use.\n\nBest regards,\nSmartStaff Talent Acquisition Team`)}`}
+                  className="btn-primary"
+                  style={{ padding: '8px 14px', fontSize: '0.86rem', textDecoration: 'none' }}
+                >
+                  Open in mail client
+                </a>
+              )}
+              <button className="btn-secondary" onClick={() => setInterviewLinkModal(null)} style={{ padding: '8px 14px', fontSize: '0.86rem' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

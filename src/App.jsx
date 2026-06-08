@@ -8,6 +8,7 @@ import Settings from './pages/Settings';
 import Analytics from './pages/Analytics';
 import Jobs from './pages/Jobs';
 import Employees from './pages/Employees';
+import CandidateInterview from './pages/CandidateInterview';
 import Login from './pages/Login';
 import { AuthProvider, useAuth } from './lib/auth.jsx';
 import './App.css';
@@ -95,6 +96,8 @@ function App() {
           {/* Public routes — these never require a session. */}
           <Route path="/login"  element={<Login mode="login"  />} />
           <Route path="/signup" element={<Login mode="signup" />} />
+          {/* Candidate-facing self-service interview — token is the auth. */}
+          <Route path="/interview/:token" element={<CandidateInterview />} />
 
           {/* Everything else lives behind the guard. */}
           <Route path="*" element={
