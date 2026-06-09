@@ -911,17 +911,11 @@ const VoiceScreening = () => {
       const data = response.data || {};
       appendBotMessage(data.reply, data.table_data);
 
-      // New flow: after screening, if the OA hasn't been generated yet we
-      // surface an in-chat prompt asking where the questions should come
-      // from. Clicking one of the three buttons calls /api/assessment/generate
-      // and then patches the freshly-minted URLs back into the table rows.
-      if (data.needs_question_source) {
-        appendBotMessage(
-          "Screening's done. Where should the OA questions come from?",
-          null,
-          { speakIt: true, sourcePrompt: { jobId: currentJobId } },
-        );
-      }
+      // (Removed) The in-chat "where should the OA questions come from?"
+      // prompt used to fire here when data.needs_question_source was true.
+      // OA generation is now triggered only from the Preview Invite flow on
+      // the Candidates page, which already shows the question-source picker
+      // with full context — keeping the chat focused on screening results.
     } catch {
       appendBotMessage("I couldn't run the screening — please check the backend logs.");
     } finally {
