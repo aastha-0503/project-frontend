@@ -13,9 +13,9 @@
 // → http://10.5.49.100:8000).  Hard-coding 0.0.0.0 only worked on the host
 // machine — remote browsers would try to reach their own 0.0.0.0.
 function defaultApiBase() {
-  if (typeof window === 'undefined') return 'http://localhost:8000';
+  if (typeof window === 'undefined') return 'http://localhost:8001';
   const host = window.location.hostname || 'localhost';
-  return `${window.location.protocol}//${host}:8000`;
+  return `${window.location.protocol}//${host}:8001`;
 }
 
 export const API_BASE = (
