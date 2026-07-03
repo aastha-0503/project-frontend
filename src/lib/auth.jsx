@@ -111,8 +111,14 @@ export const AuthProvider = ({ children }) => {
         persist(res.data.token, res.data.account);
         return { ok: true, account: res.data.account };
       }
-      return { ok: false, message: res.data?.message || 'Login failed.' };
+      return { ok: false, message: res.data?.message || 'Login failed.', code: res.data?.code };
     } catch (e) {
+      // The pending-approval gate uses HTTP 403 with code=pending_approval —
+      // surface that to the UI so it renders the friendly waiting message.
+      const data = e?.response?.data;
+      if (data?.code === 'pending_approval') {
+        return { ok: false, message: data.message || 'Account pending approval.', code: 'pending_approval' };
+      }
       return { ok: false, message: describeError(e, 'Login failed.') };
     }
   }, [persist]);
@@ -121,8 +127,19 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await axios.post(`${API_BASE}/api/auth/signup`, payload);
       if (res.data?.ok) {
-        persist(res.data.token, res.data.account);
-        return { ok: true, account: res.data.account };
+        // Employee signups now come back without a token until an admin
+        // approves the account. Surface that to the caller so the UI can
+        // show a "pending approval" message instead of routing.
+        if (res.data.token) {
+          persist(res.data.token, res.data.account);
+          return { ok: true, account: res.data.account };
+        }
+        return {
+          ok: true,
+          pending_approval: !!res.data.pending_approval,
+          message: res.data.message || '',
+          account: res.data.account,
+        };
       }
       return { ok: false, message: res.data?.message || 'Sign-up failed.' };
     } catch (e) {

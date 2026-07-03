@@ -61,6 +61,7 @@ const Login = ({ mode = 'login' }) => {
   const [showPwd, setShowPwd]     = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]         = useState('');
+  const [info, setInfo]           = useState('');     // green "pending approval" / success notes
 
   // Where to send the user once authenticated — honour the ?from= path the
   // ProtectedRoute set when it redirected them here.
@@ -72,7 +73,7 @@ const Login = ({ mode = 'login' }) => {
 
   const submit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(''); setInfo('');
 
     if (isSignup) {
       if (!password || password.length < 6) {
@@ -88,6 +89,13 @@ const Login = ({ mode = 'login' }) => {
       const res = await signup(payload);
       setSubmitting(false);
       if (!res.ok) { setError(res.message || 'Sign-up failed.'); return; }
+      // Employee signup is now a pending request — the backend returns no
+      // token until an admin approves. Show the message instead of routing
+      // into the dashboard (the user has no session to enter it with).
+      if (res.pending_approval || !res.token) {
+        setInfo(res.message || 'Account created. Please wait for an admin to approve your access.');
+        return;
+      }
       navigate(redirectTo, { replace: true });
       return;
     }
@@ -102,7 +110,16 @@ const Login = ({ mode = 'login' }) => {
     setSubmitting(true);
     const res = await login({ role, identifier, password });
     setSubmitting(false);
-    if (!res.ok) { setError(res.message || 'Login failed.'); return; }
+    if (!res.ok) {
+      // Specific copy when the backend returns the approval-gate error so
+      // the employee understands their account exists but isn't live yet.
+      if (res.code === 'pending_approval') {
+        setInfo(res.message || 'Your account is pending admin approval.');
+      } else {
+        setError(res.message || 'Login failed.');
+      }
+      return;
+    }
     navigate(redirectTo, { replace: true });
   };
 
@@ -298,6 +315,17 @@ const Login = ({ mode = 'login' }) => {
               color: '#991b1b', fontSize: '0.86rem',
             }}>
               <FiAlertCircle /> {error}
+            </div>
+          )}
+          {info && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: 8,
+              padding: '10px 14px', borderRadius: 10,
+              background: 'rgba(16,185,129,0.08)',
+              border: '1px solid rgba(16,185,129,0.35)',
+              color: '#065f46', fontSize: '0.86rem', lineHeight: 1.45,
+            }}>
+              <FiAlertCircle style={{ flexShrink: 0, marginTop: 2 }} /> {info}
             </div>
           )}
 

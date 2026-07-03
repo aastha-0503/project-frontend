@@ -84,12 +84,15 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
   };
 
   const handleConfirm = (mode) => {
-    if (!isValid(phone)) {
+    // Self-service candidate links don't need a phone — the candidate opens
+    // the URL in their browser. Only enforce phone validation for the
+    // browser and phone-call modes.
+    if (mode !== 'candidate_link' && !isValid(phone)) {
       setError('Please enter a valid phone number (10–13 digits).');
       return;
     }
     saveInterviewLang(language);
-    onConfirm(phone.trim(), mode, language);
+    onConfirm((phone || '').trim(), mode, language);
   };
 
   return (
@@ -175,8 +178,20 @@ export const PhoneConfirmModal = ({ candidate, onClose, onConfirm }) => {
             </div>
           )}
         </div>
-        <div className="modal-footer">
+        <div className="modal-footer" style={{ flexWrap: 'wrap', gap: 8 }}>
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          {/* Self-service candidate link — works regardless of Twilio config.
+              Hands the candidate a tokenised URL they open in their own
+              browser; no phone call, no in-app session. */}
+          <button
+            className="btn-secondary"
+            onClick={() => handleConfirm('candidate_link')}
+            title="Generate a self-service link the candidate opens in their own browser"
+            disabled={!candidate?.Email}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <FiVolume2 /> Send link to candidate
+          </button>
           {twilioReady ? (
             <>
               <button className="btn-secondary" onClick={() => handleConfirm('browser')} title="Use browser mode anyway">
