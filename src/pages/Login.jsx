@@ -361,7 +361,6 @@ const Login = ({ mode = 'login' }) => {
             fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.55,
           }}>
             <strong style={{ color: 'var(--text-main)' }}>Demo admin:</strong>{' '}
-            <code>admin@geeky.ai</code> / <code>admin123</code> — change in production.
           </div>
         )}
       </div>
