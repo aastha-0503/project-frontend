@@ -1,21 +1,28 @@
 // Enterprise feature utilities — theme, pipeline stages, notes, helpers.
 
 // API base — driven by VITE_API_BASE at build time so the same bundle can
-// point at localhost (dev), a Render deployment, ngrok, etc.  Falls back to
-// localhost so `npm run dev` works with no env var.
+// point at localhost (dev), a Dokploy deployment, ngrok, etc.
 //
-// On Netlify: Site settings → Environment variables → add
-//   VITE_API_BASE = https://your-render-backend.onrender.com
+// On Dokploy: Environment tab → add
+//   VITE_API_BASE = https://your-backend-service.example.com
 // Then redeploy — Vite inlines the value into the JS bundle at build time.
-// When no VITE_API_BASE is set, point the API at whatever host is serving
-// the frontend, on port 8000.  This lets the same dev build work from
-// localhost AND from other devices on the LAN (e.g. http://10.5.49.100:5173
-// → http://10.5.49.100:8000).  Hard-coding 0.0.0.0 only worked on the host
-// machine — remote browsers would try to reach their own 0.0.0.0.
+//
+// When no VITE_API_BASE is set:
+//   - In dev (vite serves on :5173), point at :8000 on the same host so
+//     `npm run dev` works with no env var alongside `uvicorn ... --port 8000`.
+//   - In prod, use the SAME origin as the served page. Dokploy typically
+//     puts frontend + backend behind separate domains with no port suffix,
+//     so appending :8000 to the prod hostname would break the browser call
+//     ("site can't be reached"). Callers who need a distinct backend domain
+//     MUST set VITE_API_BASE at build time.
 function defaultApiBase() {
-  if (typeof window === 'undefined') return 'http://localhost:8001';
-  const host = window.location.hostname || 'localhost';
-  return `${window.location.protocol}//${host}:8001`;
+  if (typeof window === 'undefined') return 'http://localhost:8000';
+  const { protocol, hostname, port, origin } = window.location;
+  // Vite dev server ports — assume backend is on 8000 alongside it.
+  if (port === '5173' || port === '5174' || port === '4173') {
+    return `${protocol}//${hostname}:8000`;
+  }
+  return origin;
 }
 
 export const API_BASE = (
