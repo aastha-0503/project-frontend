@@ -2087,3 +2087,245 @@ body {
     overflow: visible !important;
   }
 }
+
+/* =========================================================
+   MOBILE RESPONSIVE — recruiter/admin app
+   ---------------------------------------------------------
+   The candidate-facing assessment page is server-rendered and
+   blocked from mobile UAs entirely (see backend). Everything
+   below is for the React app that recruiters use.
+
+   Breakpoints:
+     - 768px: tablet portrait / large phone. Sidebar becomes a
+       drawer, page padding shrinks, multi-column grids collapse.
+     - 480px: small phone. Further trim padding, hide non-
+       essential chrome, force-single-column all cards.
+   ========================================================= */
+
+/* Desktop default: hide mobile chrome */
+.mobile-topbar { display: none; }
+.sidebar-close-mobile { display: none; }
+.sidebar-overlay { display: none; }
+
+@media (max-width: 768px) {
+  /* ── App shell: sidebar becomes an overlay drawer ── */
+  .app-shell {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  html, body {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 60;
+    width: 82vw;
+    max-width: 320px;
+    transform: translateX(-102%);
+    transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+    z-index: 55;
+    animation: overlay-fade 180ms ease-out;
+  }
+  @keyframes overlay-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .sidebar-close-mobile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.08);
+    border: none;
+    color: var(--text-inverse);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.05rem;
+  }
+  .sidebar-close-mobile:hover {
+    background: rgba(255,255,255,0.16);
+  }
+
+  /* ── Mobile top bar ── */
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-color);
+    padding: 10px 14px;
+    box-shadow: var(--shadow-xs);
+  }
+  .mobile-topbar-menu {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    cursor: pointer;
+  }
+  .mobile-topbar-menu:hover {
+    background: var(--bg-subtle);
+  }
+  .mobile-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.01em;
+  }
+
+  .main-content {
+    overflow-y: visible;
+  }
+
+  /* ── Page container padding + headers ── */
+  .page-container {
+    padding: 16px 14px 32px;
+    gap: 16px;
+  }
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .page-header h1 {
+    font-size: 1.25rem;
+  }
+  .subtitle {
+    font-size: 0.88rem;
+  }
+
+  /* ── Buttons and header actions stack full-width for tap targets ── */
+  .page-header .btn-primary,
+  .page-header .btn-secondary,
+  .page-header .btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* ── Any grid with 2+ columns collapses to a single column ── */
+  .kpi-grid,
+  .metric-grid,
+  .stats-grid,
+  .cards-grid,
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Tables get horizontal scroll instead of shattering the layout ── */
+  .table-wrap,
+  .table-scroll,
+  .candidates-table-wrap,
+  .jobs-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table {
+    min-width: 100%;
+  }
+
+  /* Widen a normal <table> as a safety net so its columns don't shred; the
+     nearest overflow ancestor will scroll it horizontally. */
+  .page-container table {
+    min-width: 720px;
+  }
+
+  /* ── Forms and inputs use full width; labels stack above inputs ── */
+  .form-row,
+  .form-grid {
+    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+  }
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="url"],
+  select,
+  textarea {
+    font-size: 16px; /* keeps iOS Safari from zooming on focus */
+    width: 100%;
+  }
+
+  /* ── Cards: shrink padding and radius so they don't dominate the viewport ── */
+  .card,
+  .surface-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  /* ── Chip / tag rows wrap instead of overflowing ── */
+  .chip-row,
+  .filter-row,
+  .tag-row {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* ── Interview room and screening layouts stack ── */
+  .interview-body,
+  .screening-layout {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-container {
+    padding: 12px 10px 28px;
+    gap: 12px;
+  }
+  .page-header h1 {
+    font-size: 1.1rem;
+  }
+  .card,
+  .surface-card {
+    padding: 14px;
+  }
+  .mobile-topbar {
+    padding: 8px 12px;
+  }
+  .mobile-topbar-menu {
+    width: 38px;
+    height: 38px;
+  }
+  /* Dashboard/analytics KPI numbers can dominate the viewport — bring them
+     down to something readable on a 375px phone. */
+  .kpi-value,
+  .metric-value {
+    font-size: 1.5rem !important;
+  }
+}

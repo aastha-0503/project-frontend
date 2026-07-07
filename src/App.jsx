@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { FiMenu } from 'react-icons/fi';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import VoiceScreening from './pages/VoiceScreening';
@@ -66,27 +67,63 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
  *     system-level configuration.
  *   - Settings is admin-only: API keys, theme defaults, data resets,
  *     question bank uploads. */
-const AppShell = () => (
-  <div className="app-shell">
-    <Sidebar />
-    <main className="main-content">
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/screening" element={<VoiceScreening />} />
-        <Route path="/jobs" element={<Jobs />} />
-        <Route path="/candidates" element={<Candidates />} />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/employees" element={
-          <ProtectedRoute requireAdmin><Employees /></ProtectedRoute>
-        } />
-        <Route path="/settings" element={
-          <ProtectedRoute requireAdmin><Settings /></ProtectedRoute>
-        } />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </main>
-  </div>
-);
+const AppShell = () => {
+  // Sidebar visibility on mobile. On desktop the CSS ignores this and always
+  // shows the sidebar; on <=768px viewports the sidebar is hidden by default
+  // and slides in when the hamburger is tapped.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  return (
+    <div className="app-shell">
+      {/* Semi-transparent overlay behind the drawer — tapping it closes the
+          menu. Only visible on mobile via CSS. */}
+      {mobileNavOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <Sidebar
+        mobileOpen={mobileNavOpen}
+        onCloseMobile={() => setMobileNavOpen(false)}
+      />
+      <main className="main-content">
+        {/* Mobile top bar — visible only on <=768px. Gives the user a way to
+            open the hidden sidebar and shows the brand so they know where
+            they are. */}
+        <div className="mobile-topbar">
+          <button
+            type="button"
+            className="mobile-topbar-menu"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open menu"
+          >
+            <FiMenu />
+          </button>
+          <div className="mobile-topbar-brand">
+            <div className="brand-logo" style={{ width: 28, height: 28, borderRadius: 8, fontSize: '0.85rem' }}>G</div>
+            <span>SmartStaff</span>
+          </div>
+        </div>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/screening" element={<VoiceScreening />} />
+          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/candidates" element={<Candidates />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/employees" element={
+            <ProtectedRoute requireAdmin><Employees /></ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute requireAdmin><Settings /></ProtectedRoute>
+          } />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
 
 function App() {
   return (

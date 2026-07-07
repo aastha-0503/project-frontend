@@ -2,12 +2,12 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FiHome, FiFileText, FiUsers, FiSettings, FiBarChart2, FiBriefcase,
-  FiLogOut, FiShield, FiUser,
+  FiLogOut, FiShield, FiUser, FiX,
 } from 'react-icons/fi';
 import NotificationBell from './NotificationBell.jsx';
 import { useAuth } from '../lib/auth.jsx';
 
-const Sidebar = () => {
+const Sidebar = ({ mobileOpen = false, onCloseMobile }) => {
   const { account, logout } = useAuth();
   const navigate = useNavigate();
   const isAdmin = account?.role === 'admin';
@@ -17,26 +17,40 @@ const Sidebar = () => {
     navigate('/login', { replace: true });
   };
 
+  // Close the drawer whenever a nav link is followed on mobile so the user
+  // isn't left staring at the still-open sidebar over their new page.
+  const closeOnNav = () => { if (onCloseMobile) onCloseMobile(); };
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${mobileOpen ? ' mobile-open' : ''}`}>
       <div className="brand-header">
         <div className="brand-logo">G</div>
         <div className="brand-text">
           <h2>SmartStaff</h2>
           <small>HR Automation Suite</small>
         </div>
-        <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <NotificationBell />
+          {/* Close button — only visible on mobile via CSS. Lets the user
+              dismiss the drawer without tapping the semi-transparent overlay. */}
+          <button
+            type="button"
+            className="sidebar-close-mobile"
+            onClick={closeOnNav}
+            aria-label="Close menu"
+          >
+            <FiX />
+          </button>
         </div>
       </div>
 
       {/* ── Step 0: Overview ── */}
       <div className="nav-section">
         <div className="nav-label">Overview</div>
-        <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
+        <NavLink to="/" end className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'} onClick={closeOnNav}>
           <FiHome /> Dashboard
         </NavLink>
-        <NavLink to="/analytics" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
+        <NavLink to="/analytics" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'} onClick={closeOnNav}>
           <FiBarChart2 /> Analytics
         </NavLink>
       </div>
@@ -45,13 +59,13 @@ const Sidebar = () => {
            who's signed in — both admins and employees. ── */}
       <div className="nav-section">
         <div className="nav-label">Workflow</div>
-        <NavLink to="/screening" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
+        <NavLink to="/screening" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'} onClick={closeOnNav}>
           <FiFileText /> <span style={{ flex: 1 }}>1 · Resume Screening</span>
         </NavLink>
-        <NavLink to="/jobs" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
+        <NavLink to="/jobs" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'} onClick={closeOnNav}>
           <FiBriefcase /> <span style={{ flex: 1 }}>2 · Jobs</span>
         </NavLink>
-        <NavLink to="/candidates" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
+        <NavLink to="/candidates" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'} onClick={closeOnNav}>
           <FiUsers /> <span style={{ flex: 1 }}>3 · Candidates</span>
         </NavLink>
       </div>
@@ -62,10 +76,10 @@ const Sidebar = () => {
       {isAdmin && (
         <div className="nav-section">
           <div className="nav-label">System</div>
-          <NavLink to="/employees" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
+          <NavLink to="/employees" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'} onClick={closeOnNav}>
             <FiUsers /> Employees
           </NavLink>
-          <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'}>
+          <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-item active-nav' : 'nav-item'} onClick={closeOnNav}>
             <FiSettings /> Settings
           </NavLink>
         </div>
