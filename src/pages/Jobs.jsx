@@ -345,6 +345,15 @@ const Jobs = () => {
 };
 
 const JobDetailModal = ({ data, onClose }) => {
+  const [resumes, setResumes] = useState([]);
+  useEffect(() => {
+    if (!data?.job_id) { setResumes([]); return; }
+    let cancelled = false;
+    axios.get(`${API_BASE}/api/jd/${data.job_id}/resumes`)
+      .then(res => { if (!cancelled) setResumes(res.data?.resumes || []); })
+      .catch(() => { if (!cancelled) setResumes([]); });
+    return () => { cancelled = true; };
+  }, [data?.job_id]);
   if (!data) return null;
   const struct = data.jd_struct || {};
   return (
@@ -422,6 +431,41 @@ const JobDetailModal = ({ data, onClose }) => {
               </div>
             ))}
           </div>
+
+          {/* Uploaded resumes — persisted per-JD on the mounted volume, so this
+              list survives redeploys. Each row links straight to the file. */}
+          <h3 style={{ margin: '12px 0 8px', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.06em' }}>
+            Uploaded resumes ({resumes.length})
+          </h3>
+          {resumes.length === 0 ? (
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: 14 }}>
+              No resumes on file for this JD.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 14 }}>
+              {resumes.map(r => (
+                <a
+                  key={r.filename}
+                  href={`${API_BASE}${r.download_url}`}
+                  target="_blank" rel="noreferrer"
+                  className="assessment-callout"
+                  style={{
+                    marginTop: 0, textDecoration: 'none', color: 'var(--text-main)',
+                    fontSize: '0.86rem',
+                  }}
+                  title={`Download ${r.filename}`}
+                >
+                  <div className="ico"><FiDownload size={13} /></div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ wordBreak: 'break-all', fontWeight: 500 }}>{r.filename}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                      {(r.size_bytes / 1024).toFixed(1)} KB · uploaded {new Date(r.uploaded_at).toLocaleString()}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
 
           <details style={{ marginTop: 14 }}>
             <summary style={{ cursor: 'pointer', fontSize: '0.86rem', color: 'var(--text-muted)' }}>

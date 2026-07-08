@@ -1593,6 +1593,27 @@ const Candidates = () => {
                       <td>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                           <EmailAction row={row} onPreview={openPreview} />
+                          {/* Download the candidate's original resume (PDF/DOCX). The
+                              backend endpoint 404s for candidates uploaded before
+                              file persistence landed — the browser shows the JSON
+                              error inline in that case. */}
+                          {row.File_Name && (
+                            <a
+                              className="email-action"
+                              style={{
+                                background: 'var(--bg-surface)',
+                                color: 'var(--text-main)',
+                                border: '1px solid var(--border-color)',
+                                textDecoration: 'none',
+                                display: 'inline-flex', alignItems: 'center', gap: 4,
+                              }}
+                              href={`${API_BASE}/api/resumes/${encodeURIComponent(row.Job_Id || row.job_id || row.session_id || activeJobId)}/download/${encodeURIComponent(row.File_Name)}`}
+                              target="_blank" rel="noreferrer"
+                              title={`Download ${row.File_Name}`}
+                            >
+                              <FiDownload /> Resume
+                            </a>
+                          )}
                           <button
                             type="button"
                             className="email-action"
