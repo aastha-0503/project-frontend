@@ -909,7 +909,14 @@ const VoiceScreening = () => {
         session_id: currentJobId,
       });
       const data = response.data || {};
-      appendBotMessage(data.reply, data.table_data);
+      // Tag every candidate row with the currently-active job so the
+      // Candidates page can filter its list by JD. Without this tag the
+      // Candidates page ends up aggregating rows across every past
+      // screening and switching JDs doesn't change the visible list.
+      const tagged = Array.isArray(data.table_data)
+        ? data.table_data.map(r => ({ ...r, Job_Id: currentJobId }))
+        : data.table_data;
+      appendBotMessage(data.reply, tagged);
 
       // (Removed) The in-chat "where should the OA questions come from?"
       // prompt used to fire here when data.needs_question_source was true.
@@ -945,12 +952,15 @@ const VoiceScreening = () => {
       // Patch the freshly-minted URLs into the most recent ResultsTable
       // message so the Email Preview can pick them up immediately.
       if (Array.isArray(d.table_data) && d.table_data.length > 0) {
+        // Re-tag with the job id so the Candidates page filter keeps
+        // working after the URLs are patched in.
+        const taggedForPatch = d.table_data.map(r => ({ ...r, Job_Id: jobId }));
         setChats(prev => prev.map(c => {
           if (c.id !== activeChatId) return c;
           const messages = [...(c.messages || [])];
           for (let i = messages.length - 1; i >= 0; i--) {
             if (Array.isArray(messages[i].tableData) && messages[i].tableData.length > 0) {
-              messages[i] = { ...messages[i], tableData: d.table_data };
+              messages[i] = { ...messages[i], tableData: taggedForPatch };
               break;
             }
           }

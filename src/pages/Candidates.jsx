@@ -1455,6 +1455,11 @@ const Candidates = () => {
   // ── Jobs (one per JD upload) ──
   const [jobs, setJobs] = useState([]);
   const [activeJobId, _setActiveJobIdState] = useState(() => getActiveJobId());
+  // Ground-truth candidate list for the active job — fetched from the
+  // backend's session-state (session.last_screening.data). More reliable
+  // than the localStorage chat history because the DB survives redeploys
+  // and a user opening the app on a different machine still sees it.
+  const [jobCandidates, setJobCandidates] = useState([]);
 
   const switchJob = useCallback((jobId) => {
     _setActiveJobIdState(jobId);
@@ -1486,13 +1491,21 @@ const Candidates = () => {
   const fetchSubmissions = useCallback(async () => {
     if (!activeJobId) return;
     try {
-      const [subsRes, statusRes] = await Promise.all([
+      const [subsRes, statusRes, jobRes] = await Promise.all([
         axios.get(`${API_BASE}/api/assessment/submissions/${activeJobId}`),
         axios.get(`${API_BASE}/api/assessment/status/${activeJobId}`),
+        // Pull the job detail so we can source the candidate table from
+        // the backend rather than the LocalStorage chat history — which
+        // used to aggregate across every past screening run.
+        axios.get(`${API_BASE}/api/jobs/${activeJobId}`).catch(() => ({ data: {} })),
       ]);
       setSubmissions(subsRes.data.submissions || []);
       if (typeof subsRes.data.pass_threshold === 'number') setPassThreshold(subsRes.data.pass_threshold);
       setStatus(statusRes.data || null);
+      const rows = jobRes.data?.candidates || [];
+      // Tag with Job_Id so any downstream code that reads row.Job_Id
+      // continues to work.
+      setJobCandidates(rows.map(r => ({ ...r, Job_Id: activeJobId })));
     } catch {}
   }, [activeJobId]);
 
@@ -1557,13 +1570,33 @@ const Candidates = () => {
   }, []);
 
   const candidates = useMemo(() => {
+    // PRIMARY source: the backend's per-job candidate list (fetched into
+    // jobCandidates). This is the ground truth — it lives in Postgres,
+    // survives redeploys, and never mixes candidates from different JDs.
+    //
+    // FALLBACK: the localStorage chat history. Used only when the backend
+    // returns no candidates for the active job (e.g. the JD was uploaded
+    // but not screened yet on this backend, or the current session was
+    // wiped and only the client-side copy exists). Even in that case we
+    // filter by Job_Id so we don't accidentally show another JD's rows.
     const seen = new Map();
-    chats.forEach(c => (c.messages || []).forEach(m => (m.tableData || []).forEach(row => {
-      seen.set(row.File_Name || row.Candidate_Name, row);
-    })));
+    if (jobCandidates.length > 0) {
+      jobCandidates.forEach(row => seen.set(row.File_Name || row.Candidate_Name, row));
+    } else {
+      const noActiveJob = !activeJobId;
+      chats.forEach(c => (c.messages || []).forEach(m => (m.tableData || []).forEach(row => {
+        const rowJob = row.Job_Id || row.job_id || row.session_id || '';
+        if (rowJob) {
+          if (rowJob !== activeJobId) return;
+        } else if (!noActiveJob) {
+          return;   // untagged row + active job set → skip
+        }
+        seen.set(row.File_Name || row.Candidate_Name, row);
+      })));
+    }
     return Array.from(seen.values())
       .sort((a, b) => (Number(b.Fit_Score_Out_Of_100) || 0) - (Number(a.Fit_Score_Out_Of_100) || 0));
-  }, [chats]);
+  }, [jobCandidates, chats, activeJobId]);
 
   const filtered = useMemo(() => {
     return candidates.filter(c => {
