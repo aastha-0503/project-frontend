@@ -4,6 +4,7 @@ import axios from 'axios';
 import {
   FiBriefcase, FiSearch, FiExternalLink, FiClipboard, FiCheckCircle,
   FiTrash2, FiArrowRight, FiX, FiUsers, FiAward, FiFileText, FiInfo, FiUser,
+  FiDownload,
 } from 'react-icons/fi';
 import {
   API_BASE, setActiveJobId, getActiveJobId, relativeTime,
@@ -310,6 +311,17 @@ const Jobs = () => {
                               <FiClipboard /> Copy link
                             </button>
                           )}
+                          {/* Download the original JD file. Backend returns
+                              404 for JDs uploaded before file persistence
+                              landed — the browser will show the JSON error
+                              inline, no client-side check needed. */}
+                          <a className="btn-secondary"
+                             style={{ padding: '6px 10px', fontSize: '0.8rem', textDecoration: 'none' }}
+                             href={`${API_BASE}/api/jd/${job.job_id}/download`}
+                             target="_blank" rel="noreferrer"
+                             title="Download the original JD file">
+                            <FiDownload /> JD
+                          </a>
                           <button className="btn-secondary"
                                   style={{ padding: '6px 10px', fontSize: '0.8rem', color: 'var(--danger)' }}
                                   onClick={() => deleteJob(job)}
@@ -423,7 +435,14 @@ const JobDetailModal = ({ data, onClose }) => {
             }}>{data.jd_text || ''}</pre>
           </details>
         </div>
-        <div className="modal-footer">
+        <div className="modal-footer" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <a className="btn-secondary"
+             style={{ padding: '8px 14px', textDecoration: 'none' }}
+             href={`${API_BASE}/api/jd/${data.job_id}/download`}
+             target="_blank" rel="noreferrer"
+             title="Download the original JD file">
+            <FiDownload /> Download JD
+          </a>
           <button className="btn-primary" onClick={onClose}>Close</button>
         </div>
       </div>
