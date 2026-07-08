@@ -128,6 +128,28 @@ const Jobs = () => {
         </button>
       </div>
 
+      {/* One-time info banner: older JDs uploaded before file persistence
+          shipped can't be re-downloaded as the original PDF/DOCX. We now
+          fall back to a .txt export of the extracted text so recruiters
+          get *something*, but the original bytes weren't saved. */}
+      <div style={{
+        padding: '10px 14px',
+        borderRadius: 10,
+        background: 'var(--warning-soft)',
+        border: '1px solid var(--warning)',
+        color: 'var(--text-main)',
+        fontSize: '0.85rem',
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+      }}>
+        <FiInfo size={16} style={{ color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
+        <span>
+          JDs and resumes uploaded from now on can be downloaded from this page and the Candidates page.
+          Anything you uploaded before file storage shipped won't have the original PDF/DOCX on file —
+          the JD download will fall back to a plain-text export, and old resume downloads will 404.
+          Re-upload if you need the original files.
+        </span>
+      </div>
+
       <div className="card" style={{ padding: 0 }}>
         <div style={{
           padding: '16px 20px', borderBottom: '1px solid var(--border-color)',
