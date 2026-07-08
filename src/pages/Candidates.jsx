@@ -924,6 +924,8 @@ const CompareModal = ({ rows, onClose }) => {
    ========================================================================= */
 const AssessmentResults = ({ submissions, passThreshold, onOpenAnswerKey, onRefresh, status, activeJobId }) => {
   const [expanded, setExpanded] = useState(null);
+  const [allSubs, setAllSubs]   = useState(null);   // { count, submissions } from /api/assessment/submissions_all
+  const [loadingAll, setLoadingAll] = useState(false);
   const hasJD = status?.has_jd;
   const hasQuestions = (status?.num_questions || 0) > 0;
   const assessmentUrl = status?.assessment_url || '';
@@ -961,8 +963,82 @@ const AssessmentResults = ({ submissions, passThreshold, onOpenAnswerKey, onRefr
           )}
           <button className="btn-secondary" onClick={onRefresh}>Refresh</button>
           <button className="btn-secondary" onClick={onOpenAnswerKey}><FiKey /> Answer Key</button>
+          {/* Diagnostic: fetches every submission across every session. Useful
+              when this JD says 0 but a candidate insists they submitted —
+              their submission likely landed on a different session_id. */}
+          <button
+            className="btn-secondary"
+            onClick={async () => {
+              setLoadingAll(true);
+              try {
+                const r = await axios.get(`${API_BASE}/api/assessment/submissions_all`);
+                setAllSubs(r.data || { count: 0, submissions: [] });
+              } catch (e) {
+                setAllSubs({ count: 0, submissions: [], error: String(e) });
+              } finally {
+                setLoadingAll(false);
+              }
+            }}
+          >
+            {loadingAll ? 'Loading…' : 'Find any missing submission'}
+          </button>
         </div>
       </div>
+
+      {allSubs && (
+        <div style={{
+          padding: '12px 20px', borderBottom: '1px solid var(--border-color)',
+          background: 'var(--warning-soft)', color: 'var(--text-main)', fontSize: '0.85rem',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <strong>All submissions across every job ({allSubs.count})</strong>
+            <button
+              onClick={() => setAllSubs(null)}
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+            >
+              close
+            </button>
+          </div>
+          {allSubs.count === 0 ? (
+            <div style={{ color: 'var(--text-muted)' }}>
+              No submissions found in memory. If a candidate submitted very recently the container may need a fresh poll; try again in a few seconds.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 260, overflowY: 'auto' }}>
+              {allSubs.submissions.map((s, i) => (
+                <div key={i} style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr auto auto auto',
+                  gap: 10, alignItems: 'center',
+                  padding: '6px 10px',
+                  background: s.session_id === activeJobId ? 'rgba(255,255,255,0.6)' : 'transparent',
+                  borderRadius: 6,
+                }}>
+                  <span>
+                    <strong>{s.name || '(no name)'}</strong>
+                    <span style={{ color: 'var(--text-muted)', marginLeft: 8, fontSize: '0.78rem' }}>
+                      · {s.jd_number || s.session_id} {s.jd_title ? `· ${s.jd_title}` : ''}
+                    </span>
+                  </span>
+                  <span style={{ fontFamily: 'Consolas, monospace', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                    {s.session_id === activeJobId ? '← active' : s.session_id.slice(0, 20)}
+                  </span>
+                  <span>
+                    {s.percent == null ? (
+                      <span style={{ color: 'var(--warning)' }}>review</span>
+                    ) : (
+                      <span className={`score-pill ${s.passed ? 'high' : 'low'}`}>{s.percent}%</span>
+                    )}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+                    {s.submitted_at ? new Date(s.submitted_at).toLocaleString() : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {status && (
         <div style={{
