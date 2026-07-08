@@ -1124,12 +1124,181 @@ const AssessmentResults = ({ submissions, passThreshold, onOpenAnswerKey, onRefr
 /* =========================================================================
    Answer key modal
    ========================================================================= */
+const AnswerKeyQuestion = ({ q, qi }) => {
+  const qtype = (q.type || 'mcq').toLowerCase();
+  const opts = q.options || [];
+  const correctIdx = q.correct_index;
+  const correctIndices = new Set((q.correct_indices || []).map(Number));
+  return (
+    <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+        {q.skill && (
+          <span style={{ background: 'var(--primary-soft)', color: 'var(--primary)', padding: '2px 10px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700 }}>
+            {q.skill}
+          </span>
+        )}
+        <span style={{
+          background: qtype === 'mcq' ? 'var(--bg-subtle)' :
+                      qtype === 'msq' ? 'rgba(6,182,212,0.12)' :
+                      'rgba(245,158,11,0.15)',
+          color: qtype === 'mcq' ? 'var(--text-muted)' :
+                 qtype === 'msq' ? '#0e7490' : '#92400e',
+          padding: '2px 10px', borderRadius: 999, fontSize: '0.7rem',
+          fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
+        }}>
+          {qtype}
+        </span>
+        {q.difficulty && (
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', alignSelf: 'center' }}>
+            · {q.difficulty}
+          </span>
+        )}
+      </div>
+      <div style={{ fontWeight: 600, marginBottom: 8, whiteSpace: 'pre-wrap' }}>
+        Q{qi + 1}. {q.question}
+      </div>
+
+      {/* MCQ — one option flagged via correct_index */}
+      {qtype === 'mcq' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {opts.map((opt, oi) => {
+            const isCorrect = oi === correctIdx;
+            return (
+              <div key={oi} style={{
+                padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                border: '1px solid', borderColor: isCorrect ? 'var(--success)' : 'var(--border-color)',
+                background: isCorrect ? 'var(--success-soft)' : 'var(--bg-app)',
+                color: isCorrect ? '#166534' : 'var(--text-main)',
+                fontWeight: isCorrect ? 600 : 400, fontSize: '0.9rem',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                {isCorrect && <FiCheckCircle />}
+                <span>{String.fromCharCode(65 + oi)}. {opt}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* MSQ — multiple options flagged via correct_indices */}
+      {qtype === 'msq' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {opts.map((opt, oi) => {
+            const isCorrect = correctIndices.has(oi);
+            return (
+              <div key={oi} style={{
+                padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                border: '1px solid', borderColor: isCorrect ? 'var(--success)' : 'var(--border-color)',
+                background: isCorrect ? 'var(--success-soft)' : 'var(--bg-app)',
+                color: isCorrect ? '#166534' : 'var(--text-main)',
+                fontWeight: isCorrect ? 600 : 400, fontSize: '0.9rem',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                {isCorrect && <FiCheckCircle />}
+                <span>{String.fromCharCode(65 + oi)}. {opt}</span>
+              </div>
+            );
+          })}
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 4 }}>
+            Multi-select · {correctIndices.size} correct option{correctIndices.size === 1 ? '' : 's'}
+          </div>
+        </div>
+      )}
+
+      {/* Coding — expected approach, test cases, starter code */}
+      {qtype === 'coding' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {q.expected_approach && (
+            <div style={{
+              padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+              background: 'var(--success-soft)', border: '1px solid var(--success)',
+              color: '#166534', fontSize: '0.88rem',
+            }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
+                Expected approach
+              </div>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{q.expected_approach}</div>
+            </div>
+          )}
+          {q.language && (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              Default language: <strong>{q.language}</strong>
+            </div>
+          )}
+          {q.starter_code && (
+            <details>
+              <summary style={{ cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                Starter code
+              </summary>
+              <pre style={{
+                marginTop: 6, padding: '10px 12px', background: 'var(--bg-subtle)',
+                borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', overflowX: 'auto',
+                whiteSpace: 'pre', fontFamily: 'Consolas, Monaco, monospace',
+              }}>{q.starter_code}</pre>
+            </details>
+          )}
+          {(q.test_cases || []).length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--text-muted)', marginBottom: 6 }}>
+                Test cases ({q.test_cases.length})
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {q.test_cases.map((tc, ti) => (
+                  <div key={ti} style={{
+                    padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-color)', background: 'var(--bg-app)',
+                    fontSize: '0.82rem',
+                  }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                      <strong>{tc.name || `Test ${ti + 1}`}</strong>
+                      {tc.hidden && (
+                        <span style={{ fontSize: '0.68rem', color: 'var(--warning)', fontWeight: 700, textTransform: 'uppercase' }}>
+                          · hidden
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 8, rowGap: 2, fontFamily: 'Consolas, Monaco, monospace' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>stdin</span>
+                      <span style={{ whiteSpace: 'pre-wrap' }}>{tc.stdin || '(empty)'}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>expected</span>
+                      <span style={{ whiteSpace: 'pre-wrap', color: 'var(--success)', fontWeight: 600 }}>{tc.expected_stdout || ''}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Descriptive — expected_points rubric */}
+      {qtype === 'descriptive' && (
+        <div style={{
+          padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+          background: 'var(--success-soft)', border: '1px solid var(--success)',
+          color: '#166534', fontSize: '0.88rem',
+        }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>
+            Expected points
+          </div>
+          <div style={{ whiteSpace: 'pre-wrap' }}>{q.expected_points || '(no rubric on file)'}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AnswerKeyModal = ({ data, onClose }) => {
   if (!data) return null;
-  const { role_title, questions } = data;
+  const role_title = data.role_title;
+  // Prefer the multi-level breakdown; fall back to the legacy flat list.
+  const levels = (data.levels && data.levels.length)
+    ? data.levels
+    : [{ level: '', role_title, count: (data.questions || []).length, questions: data.questions || [] }];
+  const totalQ = levels.reduce((n, L) => n + (L.questions || []).length, 0);
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720 }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 780 }}>
         <div className="modal-header">
           <h2>
             <FiKey color="var(--primary)" /> Answer Key
@@ -1138,33 +1307,39 @@ const AnswerKeyModal = ({ data, onClose }) => {
           <button className="icon-btn" onClick={onClose}><FiX /></button>
         </div>
         <div className="modal-body">
-          {questions.length === 0 ? (
+          {totalQ === 0 ? (
             <div style={{ color: 'var(--text-muted)' }}>No assessment generated yet. Upload a JD to create one.</div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {questions.map((q, qi) => (
-                <div key={qi} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
-                  {q.skill && <div style={{ display: 'inline-block', background: 'var(--primary-soft)', color: 'var(--primary)', padding: '2px 10px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 700, marginBottom: 6 }}>{q.skill}</div>}
-                  <div style={{ fontWeight: 600, marginBottom: 8 }}>Q{qi + 1}. {q.question}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {(q.options || []).map((opt, oi) => {
-                      const isCorrect = oi === q.correct_index;
-                      return (
-                        <div key={oi} style={{
-                          padding: '8px 12px', borderRadius: 'var(--radius-sm)',
-                          border: '1px solid', borderColor: isCorrect ? 'var(--success)' : 'var(--border-color)',
-                          background: isCorrect ? 'var(--success-soft)' : 'var(--bg-app)',
-                          color: isCorrect ? '#166534' : 'var(--text-main)',
-                          fontWeight: isCorrect ? 600 : 400, fontSize: '0.9rem',
-                          display: 'flex', alignItems: 'center', gap: 8,
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              {levels.map((L, li) => (
+                (L.questions || []).length > 0 && (
+                  <div key={li}>
+                    {L.level && (
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        margin: '4px 0 10px',
+                        paddingBottom: 6,
+                        borderBottom: '2px solid var(--border-color)',
+                      }}>
+                        <span style={{
+                          background: 'var(--primary)', color: 'white',
+                          padding: '3px 12px', borderRadius: 999,
+                          fontSize: '0.78rem', fontWeight: 700,
                         }}>
-                          {isCorrect && <FiCheckCircle />}
-                          <span>{String.fromCharCode(65 + oi)}. {opt}</span>
-                        </div>
-                      );
-                    })}
+                          {L.level}
+                        </span>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                          {L.count} question{L.count === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {L.questions.map((q, qi) => (
+                        <AnswerKeyQuestion key={qi} q={q} qi={qi} />
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )
               ))}
             </div>
           )}
